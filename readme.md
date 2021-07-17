@@ -11,8 +11,9 @@ It is aimed at simplifying:
 
 Docs:
 
-- https://supabase.io/new/blog/2021/03/31/supabase-cli
+- https://supabase.io/docs/reference/cli/getting-started
 - https://github.com/supabase/cli
+- https://supabase.io/new/blog/2021/03/31/supabase-cli
 
 # Initial setup
 
@@ -53,7 +54,7 @@ The values of `<supabase_url>`, and `<supabase_anon_key>`, should be the one use
 > `radio4000-cms`, inside the `/.env` file, to connect the frontend to
 > this project. You will also need to run the local supabase development server for this.
 
-# local development server
+# local development server (npx/docker/docker-compose)
 
 In the project's directory, you can run the following commands to run
 all the supabase components, in a local docker/docker-compose
@@ -64,10 +65,52 @@ environment.
 > You should go for the default *ports* (when prompted, for all the
 > supabase services), or have a reason to change them.
 
+> Note: if you already have a local postgresql running, you might run
+> into port conflicts, and this command could fail. In case, stop
+> other postgresql instance running, or take care of conflicting ports.
+
 - `npx supabase stop` will stop the local development server
+
+# connect to database with `psql`
+
+Using the cli `psql`, we can connect to the local dabase (which runs in docker)
+
+```
+psql <postgres_url>
+
+```
+
+By default:
+- `<postgres_url>` = `postgres://postgres:postgres@localhost:5432/postgres`
+
 
 # eject app (do not)
 
 Do not eject the app with `supabase eject`; just like
 `create-react-app` in the frontend, we're happy to get the supabase
 cli updates.
+
+# production hosting/deploy
+
+## self hosting (own server)
+
+## supabase host (sass, free, pay-as-you-go)
+a
+# User authentication (emails)
+
+The local development server (supabase backend), allows to `signUp`
+(register) and `signIn` (login) new users (also `signOut`).
+
+Since these actions **send emails**,no mail will be sent to the "real
+email" used to register locally, but mails are displayed in a local
+web server/interface.
+
+The local "webmail" (provided by the supabase setup) is availabale at
+[http://localhost:9000/](http://localhost:9000/).
+
+It allows to click the user validating link, for all email
+adresses that have been used to register.
+
+> Note, if no server is available at this local address, is is most
+> probably because you are not running the local supabase server (see
+> above)
