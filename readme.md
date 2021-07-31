@@ -17,26 +17,28 @@ Docs:
 
 # Initial setup
 
-Clone and init the project locally.
+You have to do this setup only once. You will need `docker-compose` installed on your computer.
 
-You have to do this setup only once, *don't forget to write project keys down* at the end of the init.
+1. Clone the project locally:
 
 ```
 git clone git@github.com:internet4000/radio4000-supabase
 cd radio4000-supabase
 ```
 
+2. Run supabase init
+
 The init command will create a `./.supabase` folder, with the docker
 config of everything needed to run the local development server.
-
-> This project folder should never be commited to a repository (it is
-> in .gitignore).
 
 ```
 npx supabase init
 ```
 
+> This ".supabase" folder should never be commited to a repository (it is in .gitignore).
+
 The init command should have outputed some logs, such as:
+
 ```
 Supabase URL: <supabase_url>
 Supabase Key (anon, public): <supabase_anon_key>
@@ -45,10 +47,9 @@ Database URL: <postgres_url>
 Email testing interface URL: <email_url>
 ```
 
-> Write down this information, for example in your password manager's
-> notes. It is only provided when doing a new project init
+> Write down this information, for example in your password manager's notes. It is only provided when doing a new project init
 
-The values of `<supabase_url>`, and `<supabase_anon_key>`, should be the one used in the [radio4000-cms]() project.
+The values of `<supabase_url>` and `<supabase_anon_key>`, you will need to run the [radio4000-cms]() project.
 
 > Use them to replace the values of the project
 > `radio4000-cms`, inside the `/.env` file, to connect the frontend to
@@ -57,8 +58,7 @@ The values of `<supabase_url>`, and `<supabase_anon_key>`, should be the one use
 # local development server (npx/docker/docker-compose)
 
 In the project's directory, you can run the following commands to run
-all the supabase components, in a local docker/docker-compose
-environment.
+all the supabase components, in a local docker/docker-compose environment.
 
 - `npx supabase start` will start the local development server
 
@@ -90,12 +90,13 @@ Do not eject the app with `supabase eject`; just like
 `create-react-app` in the frontend, we're happy to get the supabase
 cli updates.
 
+
 # production hosting/deploy
 
 ## self hosting (own server)
 
 ## supabase host (sass, free, pay-as-you-go)
-a
+
 # User authentication (emails)
 
 The local development server (supabase backend), allows to `signUp`
