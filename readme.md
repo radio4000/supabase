@@ -55,6 +55,10 @@ The values of `<supabase_url>` and `<supabase_anon_key>`, you will need to run t
 > `radio4000-cms`, inside the `/.env` file, to connect the frontend to
 > this project. You will also need to run the local supabase development server for this.
 
+## Setting up the database schemas
+
+Run `make`. It will pull the required the SQL files and run them on the database.
+
 # local development server (npx/docker/docker-compose)
 
 In the project's directory, you can run the following commands to run
