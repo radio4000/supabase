@@ -17,16 +17,18 @@ Docs:
 
 # Initial setup
 
-You have to do this setup only once. You will need `docker-compose` installed on your computer.
+You have to do this setup only once. 
 
-1. Clone the project locally:
+## 0. Install `docker-compose` on your computer
+
+## 1. Clone the project locally
 
 ```
 git clone git@github.com:internet4000/radio4000-supabase
 cd radio4000-supabase
 ```
 
-2. Run supabase init
+## 2. Run supabase init
 
 The init command will create a `./.supabase` folder, with the docker
 config of everything needed to run the local development server.
@@ -37,7 +39,7 @@ npx supabase init
 
 > This ".supabase" folder should never be commited to a repository (it is in .gitignore).
 
-The init command should have outputed some logs, such as:
+The init command should have outputed logs such as:
 
 ```
 Supabase URL: <supabase_url>
@@ -47,19 +49,17 @@ Database URL: <postgres_url>
 Email testing interface URL: <email_url>
 ```
 
-> Write down this information, for example in your password manager's notes. It is only provided when doing a new project init
+Write down this information, for example in your password manager's notes. It is only provided once.
 
-The values of `<supabase_url>` and `<supabase_anon_key>`, you will need to run the [radio4000-cms]() project.
+The values of `<supabase_url>` and `<supabase_anon_key>` you will need to run the [radio4000-cms](https://github.com/internet4000/radio4000-cms) project.
 
-> Use them to replace the values of the project
-> `radio4000-cms`, inside the `/.env` file, to connect the frontend to
-> this project. You will also need to run the local supabase development server for this.
-
-## Setting up the database schemas
+## 3. Set up up the database schemas
 
 Run `make`. It will pull the required the SQL files and run them on the database.
 
-# local development server (npx/docker/docker-compose)
+# More tips
+
+## Local development server (npx/docker/docker-compose)
 
 In the project's directory, you can run the following commands to run
 all the supabase components, in a local docker/docker-compose environment.
@@ -75,7 +75,7 @@ all the supabase components, in a local docker/docker-compose environment.
 
 - `npx supabase stop` will stop the local development server
 
-# connect to database with `psql`
+## Connect to database with `psql`
 
 Using the cli `psql`, we can connect to the local dabase (which runs in docker)
 
@@ -88,20 +88,20 @@ By default:
 - `<postgres_url>` = `postgres://postgres:postgres@localhost:5432/postgres`
 
 
-# eject app (do not)
+## Eject app (do not)
 
 Do not eject the app with `supabase eject`; just like
 `create-react-app` in the frontend, we're happy to get the supabase
 cli updates.
 
 
-# production hosting/deploy
+## production hosting/deploy
 
-## self hosting (own server)
+### self hosting (own server)
 
-## supabase host (sass, free, pay-as-you-go)
+### supabase host (sass, free, pay-as-you-go)
 
-# User authentication (emails)
+## User authentication (emails)
 
 The local development server (supabase backend), allows to `signUp`
 (register) and `signIn` (login) new users (also `signOut`).
