@@ -1,11 +1,11 @@
 SET search_path TO public, auth;
 
 /* -- Install extensions. pgcrypto allows us to use gen_random_uuid() */
-CREATE EXTENSION pgcrypto;
-CREATE EXTENSION moddatetime;
+-- CREATE EXTENSION pgcrypto;
+CREATE EXTENSION IF NOT EXISTS moddatetime;
 
 -- Drop exisiting tables
-DROP TABLE if exists users;
+DROP TABLE if exists public.users;
 DROP TABLE if exists channels CASCADE;
 DROP TABLE if exists tracks CASCADE;
 DROP TABLE if exists user_channel;
