@@ -34,7 +34,7 @@ create table channels (
 	url text,
 	user_id uuid not null references auth.users(id) on delete cascade,
 	unique(slug),
-	constraint slug_length check (char_length(slug) >= 4)
+	constraint slug_length check (char_length(slug) >= 3)
 );
 
 -- Create junction table for user >< channel
