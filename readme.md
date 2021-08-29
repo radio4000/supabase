@@ -30,16 +30,16 @@ cd radio4000-supabase
 
 ## 2. Run supabase init
 
-The init command will create a `./.supabase` folder, with the docker
-config of everything needed to run the local development server.
-
 ```
 npx supabase init
 ```
 
-> This ".supabase" folder should never be commited to a repository (it is in .gitignore).
+The init command will create a `./.supabase` folder, with the docker
+config of everything needed to run the local development server.
 
-The init command should have outputed logs such as:
+> The ".supabase" folder is in .gitignore and should not be commited to a repository
+
+The init command will output logs such as:
 
 ```
 Supabase URL: <supabase_url>
