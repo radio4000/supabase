@@ -141,3 +141,4 @@ create trigger user_channel_update before update on user_channel
   for each row execute procedure moddatetime (updated_at);
 create trigger channel_track_update before update on channel_track
   for each row execute procedure moddatetime (updated_at);
+
