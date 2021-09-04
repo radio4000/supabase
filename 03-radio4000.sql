@@ -7,9 +7,13 @@ CREATE EXTENSION IF NOT EXISTS moddatetime;
 -- Drop exisiting tables
 DROP TABLE if exists public.users;
 DROP TABLE if exists channels CASCADE;
+DROP TABLE if exists channel_track CASCADE;
 DROP TABLE if exists tracks CASCADE;
 DROP TABLE if exists user_channel;
-DROP TABLE if exists channel_track;
+
+-- Make sure all users are deleted
+-- DELETE FROM public.users;
+DELETE FROM auth.users;
 
 -- Create a table for public "users"
 create table users (
