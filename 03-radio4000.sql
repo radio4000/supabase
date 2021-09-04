@@ -29,9 +29,11 @@ create table channels (
 	id uuid DEFAULT gen_random_uuid() primary key,
 	name text not null,
 	slug text unique not null,
+	description text,
+	url text,
+	image text,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
-	url text,
 	user_id uuid not null references auth.users(id) on delete cascade,
 	unique(slug),
 	constraint slug_length check (char_length(slug) >= 3)
