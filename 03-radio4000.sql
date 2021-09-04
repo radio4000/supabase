@@ -38,7 +38,7 @@ create table channels (
 	image text,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
-	user_id uuid not null references auth.users(id) on delete cascade,
+	-- user_id uuid not null references auth.users(id) on delete cascade,
 	unique(slug),
 	constraint slug_length check (char_length(slug) >= 3)
 );
@@ -87,7 +87,7 @@ create table tracks (
 -- Create junction table for channel tracks
 create table channel_track (
 	user_id uuid not null references auth.users (id),
-	channel_id uuid not null references channels (id) on delete cascade,
+	channel_id uuid not null references channels (id),
 	track_id uuid not null references tracks (id) on delete cascade,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
@@ -125,8 +125,9 @@ CREATE or replace function delete_user()
   returns void
 LANGUAGE SQL SECURITY DEFINER
 AS $$
-	 delete from channels where user_id = auth.uid();
-   delete from auth.users where id = auth.uid();
+	-- delete from channels where user_id = auth.uid();
+	delete from user_channel where user_id = auth.uid();
+	delete from auth.users where id = auth.uid();
 $$;
 
 -- Automatically update "updated_at" timestamps
