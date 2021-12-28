@@ -63,6 +63,10 @@ Run `make`. It will pull the required the SQL files in this repo and run them on
 
 ## More tips
 
+### API Limit
+
+By default the database is set to return max 1000 rows. You can change this under Settings > API on app.supabase.io.
+
 ### Local development server (npx/docker/docker-compose)
 
 In the project's directory, you can run the following commands to run
