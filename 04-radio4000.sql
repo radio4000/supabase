@@ -1,4 +1,11 @@
+SET search_path TO public, auth;
+
+/* -- Install extensions. pgcrypto allows us to use gen_random_uuid() */
+-- CREATE EXTENSION pgcrypto;
+CREATE EXTENSION IF NOT EXISTS moddatetime;
+
 -- Drop exisiting tables
+DROP TABLE if exists public.users;
 DROP TABLE if exists channels CASCADE;
 DROP TABLE if exists channel_track CASCADE;
 DROP TABLE if exists tracks CASCADE;
@@ -7,6 +14,19 @@ DROP TABLE if exists user_channel;
 -- Make sure all users are deleted
 -- DELETE FROM public.users;
 DELETE FROM auth.users;
+
+-- Create a table for public "users"
+create table users (
+	id uuid references auth.users not null,
+	created_at timestamp with time zone default CURRENT_TIMESTAMP,
+	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
+	primary key (id)
+);
+
+alter table users enable row level security;
+create policy "Public users are viewable by everyone." on users for select using (true);
+create policy "Users can insert their own user." on users for insert with check (auth.uid() = id);
+create policy "Users can update own user." on users for update using (auth.uid() = id);
 
 -- Create a table for public "channels"
 create table channels (
@@ -18,6 +38,7 @@ create table channels (
 	image text,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
+	-- user_id uuid not null references auth.users(id) on delete cascade,
 	unique(slug),
 	constraint slug_length check (char_length(slug) >= 3)
 );
@@ -112,7 +133,8 @@ $$;
 -- Automatically update "updated_at" timestamps
 -- the trigger will set the "updated_at" column to the current timestamp for every update
 create extension if not exists moddatetime schema extensions;
-
+create trigger user_update before update on users
+  for each row execute procedure moddatetime (updated_at);
 create trigger channel_update before update on channels
   for each row execute procedure moddatetime (updated_at);
 create trigger user_channel_update before update on user_channel
