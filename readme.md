@@ -16,11 +16,11 @@ If you are ok using the offered Supabase hosting.
 1. Login to [app.supabase.io](https://app.supabase.io)
 2. Create a new project
 3. Go to the `> sql` page to write a new sql query
-4. Copy the content from the file [04-radio4000.sql](https://github.com/internet4000/radio4000-supabase/blob/main/04-radio4000.sql), and run it on
+4. Copy the content from the file [04-radio4000.sql](https://github.com/radio4000/supabase/blob/main/04-radio4000.sql), and run it on
    supabase (in the page from the step above)
 4. If it worked, it should return no error to the query
 
-That's it. You can now build your app or see the [radio4000-cms](https://github.com/internet4000/radio4000-cms) project.
+That's it. You can now build your app or see the [radio4000/cms](https://github.com/radio4000/cms) project.
 
 ## B) Self-hosted Supabase with Docker
 
