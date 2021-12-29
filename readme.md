@@ -9,21 +9,20 @@ Later we'd like to help with
 - putting a new version to production
 - maybe future supabase functions/workers
 
-### With Supabase platform (sass, free, pay-as-you-go)
+## A) With Supabase platform (sass, free, pay-as-you-go)
 
-If you are ok with using the offered Supabase hosting.
+If you are ok using the offered Supabase hosting.
 
 1. Login to [app.supabase.io](https://app.supabase.io)
-2. Go to the `> sql` page to write a new sql query
-3. Copy the content from the file [04-radio4000.sql](https://github.com/internet4000/radio4000-supabase/blob/main/04-radio4000.sql), and run it on
+2. Create a new project
+3. Go to the `> sql` page to write a new sql query
+4. Copy the content from the file [04-radio4000.sql](https://github.com/internet4000/radio4000-supabase/blob/main/04-radio4000.sql), and run it on
    supabase (in the page from the step above)
 4. If it worked, it should return no error to the query
 
-That's it.
+That's it. You can now build your app or see the [radio4000-cms](https://github.com/internet4000/radio4000-cms) project.
 
-See the [radio4000-cms](https://github.com/internet4000/radio4000-cms) project.
-
-### Self-hosted Supabase with Docker
+## B) Self-hosted Supabase with Docker
 
 If you want to host your own Supabase instance, you can do it. This is how. You have to do this setup only once. 
 
@@ -89,21 +88,19 @@ Using the cli `psql`, we can connect to the local dabase (which runs in docker)
 
 ```
 psql <postgres_url>
-
 ```
 
 By default:
 - `<postgres_url>` = `postgres://postgres:postgres@localhost:5432/postgres`
 
-
 ### Eject app (do not)
 
-Do not eject the app with `supabase eject`; just like
-`create-react-app` in the frontend, we're happy to get the supabase
-cli updates.
+Do not eject the app with `supabase eject`; just like `create-react-app` in the frontend,
+we're happy to get the supabase cli updates.
 
+## Deploying
 
-## production hosting/deploy
+@todo
 
 ## User authentication (emails)
 
