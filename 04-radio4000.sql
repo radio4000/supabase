@@ -83,7 +83,7 @@ create table tracks (
 	discogs_url text,
 	title text not null,
 	description text,
-	tags text[]  default '{}'
+	tags text[]
 );
 
 -- Create junction table for channel tracks
