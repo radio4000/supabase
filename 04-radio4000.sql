@@ -83,7 +83,8 @@ create table tracks (
 	discogs_url text,
 	title text not null,
 	description text,
-	tags text[]
+	tags text[],
+	mentions text[]
 );
 
 -- Create junction table for channel tracks
@@ -173,17 +174,17 @@ AS $$
 	END;
 $$;
 
-create or replace function parse_track_tags()
+create or replace function parse_track_description()
 	returns trigger
 	language plpgsql
 as $$
 	begin
 		new.tags = parse_tokens(new.description, '#');
-		-- new.mentions = parse_tokens(new.description, '@');
+		new.mentions = parse_tokens(new.description, '@');
 		return new;
 	end;
 $$;
 
 create trigger update_tags
 	before insert or update on tracks
-	for each row execute procedure parse_track_tags(); 
+	for each row execute procedure parse_track_description(); 
