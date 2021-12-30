@@ -82,7 +82,8 @@ create table tracks (
 	url text not null,
 	discogs_url text,
 	title text not null,
-	description text
+	description text,
+	tags text[]  default '{}'
 );
 
 -- Create junction table for channel tracks
@@ -123,7 +124,7 @@ alter publication supabase_realtime add table channels;
 
 -- Create a procedure to delete the authenticated user
 CREATE or replace function delete_user()
-  returns void
+	returns void
 LANGUAGE SQL SECURITY DEFINER
 AS $$
 	-- delete from channels where user_id = auth.uid();
@@ -135,10 +136,54 @@ $$;
 -- the trigger will set the "updated_at" column to the current timestamp for every update
 create extension if not exists moddatetime schema extensions;
 create trigger user_update before update on users
-  for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime (updated_at);
 create trigger channel_update before update on channels
-  for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime (updated_at);
 create trigger user_channel_update before update on user_channel
-  for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime (updated_at);
 create trigger channel_track_update before update on channel_track
-  for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime (updated_at);
+
+-- Usage: parse_tokens(myString, '#')
+CREATE or replace FUNCTION parse_tokens(content text, prefix text)  
+	RETURNS text[]
+	LANGUAGE plpgsql
+AS $$
+	DECLARE
+		regex text;
+		matches text;
+		subquery text;
+		captures text;
+		tokens text[];
+	BEGIN
+		regex := prefix || '(\S+)';
+		matches := 'regexp_matches($1, $2, $3) as captures';
+		subquery := '(SELECT ' || matches || ' ORDER BY captures) as matches';
+		captures := 'array_agg(matches.captures[1])';
+
+		EXECUTE 'SELECT ' || captures || ' FROM ' || subquery
+		INTO tokens
+		USING LOWER(content), regex, 'g';
+
+		IF tokens IS NULL THEN
+			tokens = '{}';
+		END IF;
+
+		RETURN tokens;
+	END;
+$$;
+
+create or replace function parse_track_tags()
+	returns trigger
+	language plpgsql
+as $$
+	begin
+		new.tags = parse_tokens(new.description, '#');
+		-- new.mentions = parse_tokens(new.description, '@');
+		return new;
+	end;
+$$;
+
+create trigger update_tags
+	before insert or update on tracks
+	for each row execute procedure parse_track_tags(); 
