@@ -24,7 +24,7 @@ create table users (
 );
 
 alter table users enable row level security;
-create policy "Public users are viewable by everyone." on users for select using (true);
+create policy "Users can only read their own user." on users for select using (auth.uid() = id);
 create policy "Users can insert their own user." on users for insert with check (auth.uid() = id);
 create policy "Users can update own user." on users for update using (auth.uid() = id);
 
