@@ -2,7 +2,7 @@
 
 The **Supabase** configuration for Radio4000. 
 
-This repository will help you set up a working backend for Radio4000. The database can either run on the hosted Supabase offering or you can use your own server.
+This repository will help you set up a working backend for Radio4000. The database can either run on the hosted Supabase platform, or you can use your own server.
 
 Later we'd like to help with
 
