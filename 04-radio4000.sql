@@ -1,5 +1,3 @@
-SET search_path TO public, auth;
-
 /* -- Install extensions. pgcrypto allows us to use gen_random_uuid() */
 -- CREATE EXTENSION pgcrypto;
 CREATE EXTENSION IF NOT EXISTS moddatetime;
