@@ -23,7 +23,7 @@ create table accounts (
 );
 
 alter table accounts enable row level security;
-create policy "Public accounts are viewable by everyone." on accounts for select using (true);
+create policy "Public accounts are viewable by everyone." on accounts for select using (auth.uid() = id);
 create policy "Users can only insert their own account." on accounts for insert with check (auth.uid() = id);
 create policy "Users can only update own account." on accounts for update using (auth.uid() = id);
 
