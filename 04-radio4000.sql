@@ -5,28 +5,27 @@ SET search_path TO public, auth;
 CREATE EXTENSION IF NOT EXISTS moddatetime;
 
 -- Drop exisiting tables
-DROP TABLE if exists public.users;
+DROP TABLE if exists public.accounts;
 DROP TABLE if exists channels CASCADE;
 DROP TABLE if exists channel_track CASCADE;
 DROP TABLE if exists tracks CASCADE;
 DROP TABLE if exists user_channel;
 
 -- Make sure all users are deleted
--- DELETE FROM public.users;
 DELETE FROM auth.users;
 
--- Create a table for public "users"
-create table users (
+-- Create a table for public user accounts
+create table accounts (
 	id uuid references auth.users not null,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	primary key (id)
 );
 
-alter table users enable row level security;
-create policy "Public users are viewable by everyone." on users for select using (true);
-create policy "Users can insert their own user." on users for insert with check (auth.uid() = id);
-create policy "Users can update own user." on users for update using (auth.uid() = id);
+alter table accounts enable row level security;
+create policy "Public accounts are viewable by everyone." on accounts for select using (true);
+create policy "Users can only insert their own account." on accounts for insert with check (auth.uid() = id);
+create policy "Users can only update own account." on accounts for update using (auth.uid() = id);
 
 -- Create a table for public "channels"
 create table channels (
@@ -120,8 +119,8 @@ begin;
 	drop publication if exists supabase_realtime;
 	create publication supabase_realtime;
 commit;
-alter publication supabase_realtime add table users;
 alter publication supabase_realtime add table channels;
+alter publication supabase_realtime add table tracks;
 
 -- Create a procedure to delete the authenticated user
 CREATE or replace function delete_user()
@@ -136,7 +135,7 @@ $$;
 -- Automatically update "updated_at" timestamps
 -- the trigger will set the "updated_at" column to the current timestamp for every update
 create extension if not exists moddatetime schema extensions;
-create trigger user_update before update on users
+create trigger user_update before update on accounts
 	for each row execute procedure moddatetime (updated_at);
 create trigger channel_update before update on channels
 	for each row execute procedure moddatetime (updated_at);
