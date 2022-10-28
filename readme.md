@@ -111,6 +111,10 @@ Since these actions **send emails**,no mail will be sent to the "real
 email" used to register locally, but mails are displayed in a local
 web server/interface.
 
+# about supabase
+
+- https://supabase.com/docs/architecture
+
 The local "webmail" (provided by the supabase setup) is availabale at
 [http://localhost:9000/](http://localhost:9000/).
 
