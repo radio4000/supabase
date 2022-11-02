@@ -40,6 +40,9 @@ create table channels (
 	constraint slug_length check (char_length(slug) >= 3)
 );
 
+-- Faster when we query by slug
+create index channels_slug_index on channels (slug);
+
 -- Create junction table for user >< channel
 create table user_channel (
 	user_id uuid not null references auth.users (id) on delete cascade,
