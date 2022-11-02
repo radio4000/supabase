@@ -1,5 +1,3 @@
-SET search_path TO public, auth;
-
 /* -- Install extensions. pgcrypto allows us to use gen_random_uuid() */
 -- CREATE EXTENSION pgcrypto;
 CREATE EXTENSION IF NOT EXISTS moddatetime;
@@ -23,7 +21,7 @@ create table accounts (
 );
 
 alter table accounts enable row level security;
-create policy "Public accounts are viewable by everyone." on accounts for select using (auth.uid() = id);
+create policy "Users can only read their own accounts." on accounts for select using (auth.uid() = id);
 create policy "Users can only insert their own account." on accounts for insert with check (auth.uid() = id);
 create policy "Users can only update own account." on accounts for update using (auth.uid() = id);
 
@@ -101,10 +99,10 @@ alter table tracks enable row level security;
 create policy "Public tracks are viewable by everyone." on tracks for select using (true);
 create policy "Authenticated users can insert tracks" on tracks for insert with check (auth.role() = 'authenticated');
 create policy "Users can update their own track." on tracks for update using (
-	auth.uid() in (select user_id from channel_track where channel_track.user_id = auth.uid())
+	auth.uid() in (select user_id from channel_track where track_id = id)
 );
 create policy "Users can delete own track." on tracks for delete using (
-	auth.uid() in (select user_id from channel_track where channel_track.user_id = auth.uid())
+	auth.uid() in (select user_id from channel_track where track_id = id)
 );
 
 -- Channel track policies
