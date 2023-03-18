@@ -34,7 +34,9 @@ The values of `<supabase_url>` and `<supabase_anon_key>` you will need to run th
 
 ### 3. Set up up the database schemas
 
-Run `make import`. It will pull the required the SQL files in this repo and run them on the local database. Make sure the database is running.
+```
+psql <DATABASE_URL> -f radio4000.sql
+```
 
 ## Tips
 

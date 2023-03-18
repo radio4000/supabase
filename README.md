@@ -16,7 +16,7 @@ If you are ok using the offered Supabase hosting.
 
 ```shell
 DATABASE_URL = postgres://postgres:[DB_PASSWORD]@[HOST]:6543/postgres
-psql $DATABASE_URL -f 04-radio4000.sql
+psql $DATABASE_URL -f radio4000.sql
 ```
 
 That's it. Now you have an empty PostgreSQL database set up to work for Radio4000. What now?
