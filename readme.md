@@ -9,58 +9,29 @@ Later we'd like to help with
 - putting a new version to production
 - maybe future supabase functions/workers
 
-## A) With Supabase platform (sass, free, pay-as-you-go)
+## With Supabase platform (sass, free, pay-as-you-go)
 
 If you are ok using the offered Supabase hosting.
 
-1. Login to [app.supabase.io](https://app.supabase.io)
-2. Create a new project
-3. Go to the `> sql` page to write a new sql query
-4. Copy the content from the file [04-radio4000.sql](https://github.com/radio4000/supabase/blob/main/04-radio4000.sql), and run it on
-   supabase (in the page from the step above)
-4. If it worked, it should return no error to the query
+1. Create a new project on [app.supabase.io](https://app.supabase.io)
+2. Import the [04-radio4000.sql](https://github.com/radio4000/supabase/blob/main/04-radio4000.sql) SQL schema
 
-That's it. You can now build your app or see the [radio4000/cms](https://github.com/radio4000/cms) project.
-
-## B) Self-hosted Supabase with Docker
-
-If you want to host your own Supabase instance, you can do it. This is how. You have to do this setup only once. 
-
-### 1. Install docker and clone this repo
-
-1. Install `docker-compose` on your computer
-1. Clone the project locally `git clone git@github.com:internet4000/radio4000-supabase`
-
-### 2. Run supabase init
-
-```
-npx supabase init
+```shell
+# Find the connection string under Supabase project settings -> Database.
+DATABASE_URL = postgres://postgres:[DB_PASSWORD]@[HOST]:6543/postgres
+psql $DATABASE_URL -f 04-radio4000.sql
 ```
 
-The init command will create a `./.supabase` folder, with the docker
-config of everything needed to run the local development server.
+That's it. Now you have an empty PostgreSQL database set up to work for Radio4000. What now?
 
-> The ".supabase" folder is in .gitignore and should not be commited to a repository
+- You could build your own thing!
+- See the [radio4000/cms](https://github.com/radio4000/cms) project
 
-The init command will output logs such as:
+## Self-hosted
 
-```
-Supabase URL: <supabase_url>
-Supabase Key (anon, public): <supabase_anon_key>
-Supabase Key (service_role, private): <supabase_service_role_key>
-Database URL: <postgres_url>
-Email testing interface URL: <email_url>
-```
+See the guide to [self-hosting with Supabase](https://github.com/radio4000/supabase/blob/main/self-hosted.md).
 
-Write down this information, for example in your password manager's notes. It is only provided once.
-
-The values of `<supabase_url>` and `<supabase_anon_key>` you will need to run the [radio4000-cms](https://github.com/internet4000/radio4000-cms) project.
-
-### 3. Set up up the database schemas
-
-Run `make`. It will pull the required the SQL files in this repo and run them on the local database. Make sure the database is running.
-
-## More tips
+## Tips
 
 ### API Limit
 
