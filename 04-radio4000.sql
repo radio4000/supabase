@@ -1,7 +1,3 @@
-/* -- Install extensions. pgcrypto allows us to use gen_random_uuid() */
--- CREATE EXTENSION pgcrypto;
-CREATE EXTENSION IF NOT EXISTS moddatetime;
-
 -- Drop exisiting tables
 DROP TABLE if exists public.accounts;
 DROP TABLE if exists channels CASCADE;
@@ -137,13 +133,15 @@ $$;
 -- the trigger will set the "updated_at" column to the current timestamp for every update
 create extension if not exists moddatetime schema extensions;
 create trigger user_update before update on accounts
-	for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime(updated_at);
 create trigger channel_update before update on channels
-	for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime(updated_at);
 create trigger user_channel_update before update on user_channel
-	for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime(updated_at);
 create trigger channel_track_update before update on channel_track
-	for each row execute procedure moddatetime (updated_at);
+	for each row execute procedure moddatetime(updated_at);
+create trigger track_update before update on tracks
+	for each row execute procedure moddatetime(updated_at);
 
 -- Usage: parse_tokens(myString, '#')
 CREATE or replace FUNCTION parse_tokens(content text, prefix text)  
