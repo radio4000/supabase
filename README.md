@@ -12,7 +12,7 @@ Later we'd like to help with
 If you are ok using the offered Supabase hosting.
 
 1. Create a new project on [app.supabase.io](https://app.supabase.io)
-2. Import the [04-radio4000.sql](https://github.com/radio4000/supabase/blob/main/04-radio4000.sql) SQL schema
+2. Import the [radio4000.sql](https://github.com/radio4000/supabase/blob/main/radio4000.sql) SQL schema
 
 ```shell
 DATABASE_URL = postgres://postgres:[DB_PASSWORD]@[HOST]:6543/postgres
@@ -24,9 +24,9 @@ That's it. Now you have an empty PostgreSQL database set up to work for Radio400
 - You could build your own thing!
 - See the [radio4000/cms](https://github.com/radio4000/cms) project
 
-## Self-hosted
+## Self-hosting
 
-See the guide to [self-hosting with Supabase](https://github.com/radio4000/supabase/blob/main/self-hosted.md).
+See the guide to [self-hosting with Supabase](https://github.com/radio4000/supabase/blob/main/self-hosting.md).
 
 ## Tips
 
