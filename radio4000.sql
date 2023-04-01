@@ -118,6 +118,7 @@ begin;
 commit;
 alter publication supabase_realtime add table channels;
 alter publication supabase_realtime add table tracks;
+alter publication supabase_realtime add table user_channel;
 
 -- Create a procedure to delete the authenticated user
 CREATE or replace function delete_user()
