@@ -1,3 +1,6 @@
+-- Add PostGIS extension for geography data types (the map)
+create extension if not exists postgis schema extensions;
+
 -- Drop exisiting tables
 DROP TABLE if exists public.accounts;
 DROP TABLE if exists channels CASCADE;
@@ -29,6 +32,9 @@ create table channels (
 	description text,
 	url text,
 	image text,
+  longitude float,
+  latitude float,
+  coordinates geography(POINT),
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	-- user_id uuid not null references auth.users(id) on delete cascade,
