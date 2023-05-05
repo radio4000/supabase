@@ -35,6 +35,8 @@ create table channels (
   longitude float,
   latitude float,
   coordinates geography(POINT),
+  -- Computed column with name, slug and description for full-text search
+  fts tsvector generated always as (to_tsvector('english', name || ' ' || slug || ' ' || description)) stored;
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	-- user_id uuid not null references auth.users(id) on delete cascade,
@@ -42,8 +44,9 @@ create table channels (
 	constraint slug_length check (char_length(slug) >= 3)
 );
 
--- Faster when we query by slug
+-- Faster when we query by slug and search
 create index channels_slug_index on channels (slug);
+create index channels_fts on channels using gin (fts);
 
 -- Create junction table for user >< channel
 create table user_channel (
@@ -87,7 +90,10 @@ create table tracks (
 	description text,
 	tags text[],
 	mentions text[]
+  fts tsvector generated always as (to_tsvector('english', title || ' ' || description)) stored;
 );
+
+create index tracks_fts on tracks using gin (fts);
 
 -- Create junction table for channel tracks
 create table channel_track (
