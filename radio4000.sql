@@ -106,26 +106,26 @@ create table channel_track (
 );
 
 -- Create junction table for a channel following channel
-create table channel_follow (
-	follower_channel_id uuid not null references channels (id) on delete cascade,
-	following_channel_id uuid not null references channels (id) on delete cascade,
+create table followers (
+	follower_id uuid not null references channels (id) on delete cascade,
+	channel_id uuid not null references channels (id) on delete cascade,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
-	PRIMARY KEY (follower_channel_id, following_channel_id)
+	PRIMARY KEY (follower_id, channel_id)
 );
 
--- channel_follow policies
-alter table channel_follow enable row level security;
+-- Followers policies
+alter table followers enable row level security;
 
-create policy "Channel follow relationships are viewable by everyone" on channel_follow for select using (true);
+create policy "relationships are viewable by everyone" on followers for select using (true);
 
-create policy "User can insert channel follow relationship." on channel_follow for insert
+create policy "User can insert channel follow relationship." on followers for insert
 with check (
-	auth.uid() in (select user_id from user_channel where channel_id = follower_channel_id)
+	auth.uid() in (select user_id from user_channel where channel_id = follower_id)
 );
 
-create policy "Users can delete channel follow relationship." on channel_follow for delete
+create policy "Users can delete channel follow relationship." on followers for delete
 using (
-	auth.uid() in (select user_id from user_channel where channel_id = follower_channel_id)
+	auth.uid() in (select user_id from user_channel where channel_id = follower_id)
 );
 
 -- Track policies
@@ -155,7 +155,7 @@ commit;
 alter publication supabase_realtime add table channels;
 alter publication supabase_realtime add table tracks;
 alter publication supabase_realtime add table user_channel;
-alter publication supabase_realtime add table channel_follow;
+alter publication supabase_realtime add table followers;
 
 -- Create a procedure to delete the authenticated user
 CREATE or replace function delete_user()
