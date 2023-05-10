@@ -32,11 +32,11 @@ create table channels (
 	description text,
 	url text,
 	image text,
-  longitude float,
-  latitude float,
-  coordinates geography(POINT),
-  -- Computed column with name, slug and description for full-text search
-  fts tsvector generated always as (to_tsvector('english', name || ' ' || slug || ' ' || description)) stored;
+	longitude float,
+	latitude float,
+	coordinates geography(POINT),
+	-- Computed column with name, slug and description for full-text search
+	fts tsvector generated always as (to_tsvector('english', name || ' ' || slug || ' ' || description)) stored;
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	-- user_id uuid not null references auth.users(id) on delete cascade,
@@ -90,7 +90,7 @@ create table tracks (
 	description text,
 	tags text[],
 	mentions text[]
-  fts tsvector generated always as (to_tsvector('english', title || ' ' || description)) stored;
+	fts tsvector generated always as (to_tsvector('english', title || ' ' || description)) stored;
 );
 
 create index tracks_fts on tracks using gin (fts);
@@ -103,6 +103,29 @@ create table channel_track (
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	PRIMARY KEY (channel_id, track_id)
+);
+
+-- Create junction table for a channel following channel
+create table channel_follow (
+	follower_channel_id uuid not null references channels (id) on delete cascade,
+	following_channel_id uuid not null references channels (id) on delete cascade,
+	created_at timestamp with time zone default CURRENT_TIMESTAMP,
+	PRIMARY KEY (follower_channel_id, following_channel_id)
+);
+
+-- channel_follow policies
+alter table channel_follow enable row level security;
+
+create policy "Channel follow relationships are viewable by everyone" on channel_follow for select using (true);
+
+create policy "User can insert channel follow relationship." on channel_follow for insert
+with check (
+	auth.uid() in (select user_id from user_channel where channel_id = follower_channel_id)
+);
+
+create policy "Users can delete channel follow relationship." on channel_follow for delete
+using (
+	auth.uid() in (select user_id from user_channel where channel_id = follower_channel_id)
 );
 
 -- Track policies
@@ -123,6 +146,7 @@ create policy "User can insert their junction." on channel_track for insert with
 create policy "Users can update own junction." on channel_track for update using (auth.uid() = user_id);
 create policy "Users can delete own junction." on channel_track for delete using (auth.uid() = user_id);
 
+
 -- Set up Realtime!
 begin;
 	drop publication if exists supabase_realtime;
@@ -131,6 +155,7 @@ commit;
 alter publication supabase_realtime add table channels;
 alter publication supabase_realtime add table tracks;
 alter publication supabase_realtime add table user_channel;
+alter publication supabase_realtime add table channel_follow;
 
 -- Create a procedure to delete the authenticated user
 CREATE or replace function delete_user()
@@ -157,7 +182,7 @@ create trigger track_update before update on tracks
 	for each row execute procedure moddatetime(updated_at);
 
 -- Usage: parse_tokens(myString, '#')
-CREATE or replace FUNCTION parse_tokens(content text, prefix text)  
+CREATE or replace FUNCTION parse_tokens(content text, prefix text)
 	RETURNS text[]
 	LANGUAGE plpgsql
 AS $$
@@ -198,4 +223,4 @@ $$;
 
 create trigger update_tags
 	before insert or update on tracks
-	for each row execute procedure parse_track_description(); 
+	for each row execute procedure parse_track_description();
