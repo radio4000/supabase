@@ -35,12 +35,18 @@ create table channels (
 	longitude float,
 	latitude float,
 	coordinates geography(POINT),
+
+  favorites array null,
+  followers array null,
+  firebase_id text null
+
 	-- Computed column with name, slug and description for full-text search
 	fts tsvector generated always as (to_tsvector('english', name || ' ' || slug || ' ' || description)) stored;
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	-- user_id uuid not null references auth.users(id) on delete cascade,
 	unique(slug),
+  unique(firebase_id),
 	constraint slug_length check (char_length(slug) >= 3)
 );
 
