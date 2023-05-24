@@ -13,7 +13,7 @@ DELETE FROM auth.users;
 
 -- Create a table for public user accounts
 create table accounts (
-	id uuid references auth.users not null,
+	id uuid not null references auth.users (id) on delete cascade,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	primary key (id)
