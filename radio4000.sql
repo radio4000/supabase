@@ -36,17 +36,22 @@ create table channels (
 	latitude float,
 	coordinates geography(POINT),
 
-  favorites array null,
-  followers array null,
-  firebase_id text null
+	favorites array null,
+	followers array null,
+	firebase_id text null
 
-	-- Computed column with name, slug and description for full-text search
-	fts tsvector generated always as (to_tsvector('english', name || ' ' || slug || ' ' || description)) stored;
+	-- Computed column with for full-text search
+	fts tsvector generated always as (
+		setweight(to_tsvector('english', coalesce(name, '')), 'A') || ' ' ||
+		setweight(to_tsvector('english', coalesce(slug, '')), 'B') || ' ' ||
+		setweight(to_tsvector('english', coalesce(description, '')), 'C')
+	) stored;
+
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	-- user_id uuid not null references auth.users(id) on delete cascade,
 	unique(slug),
-  unique(firebase_id),
+	unique(firebase_id),
 	constraint slug_length check (char_length(slug) >= 3)
 );
 
@@ -96,7 +101,11 @@ create table tracks (
 	description text,
 	tags text[],
 	mentions text[]
-	fts tsvector generated always as (to_tsvector('english', title || ' ' || description)) stored;
+	-- Computed column with for full-text search
+	fts tsvector generated always as (
+		setweight(to_tsvector('english', coalesce(title, '')), 'A') || ' ' ||
+		setweight(to_tsvector('english', coalesce(description, '')), 'B')
+	) stored;
 );
 
 create index tracks_fts on tracks using gin (fts);
