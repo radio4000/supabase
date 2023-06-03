@@ -120,6 +120,24 @@ create table channel_track (
 	PRIMARY KEY (channel_id, track_id)
 );
 
+-- A view for tracks which adds the channel.slug column
+create view channel_tracks as
+	select
+		tracks.id,
+		tracks.created_at,
+		tracks.updated_at,
+		tracks.url,
+		tracks.discogs_url,
+		tracks.title,
+		tracks.description,
+		tracks.tags,
+		tracks.mentions,
+		tracks.fts,
+		channels.slug
+	from tracks
+	join channel_track on tracks.id = channel_track.track_id
+	join channels on channels.id = channel_track.channel_id;
+
 -- Create junction table for a channel following channel
 create table followers (
 	follower_id uuid not null references channels (id) on delete cascade,
