@@ -7,6 +7,7 @@ DROP TABLE if exists channels CASCADE;
 DROP TABLE if exists channel_track CASCADE;
 DROP TABLE if exists tracks CASCADE;
 DROP TABLE if exists user_channel;
+DROP TABLE if exists followers;
 
 -- Make sure all users are deleted
 DELETE FROM auth.users;
@@ -38,7 +39,7 @@ create table channels (
 
 	favorites array null,
 	followers array null,
-	firebase_id text null
+	firebase_id text null,
 
 	-- Computed column with for full-text search
 	fts tsvector generated always as (
