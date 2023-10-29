@@ -37,8 +37,8 @@ create table channels (
 	latitude float,
 	coordinates geography(POINT),
 
-	favorites array null,
-	followers array null,
+	favorites text[],
+	followers text[],
 	firebase_id text null,
 
 	-- Computed column with for full-text search
@@ -46,7 +46,7 @@ create table channels (
 		setweight(to_tsvector('english', coalesce(name, '')), 'A') || ' ' ||
 		setweight(to_tsvector('english', coalesce(slug, '')), 'B') || ' ' ||
 		setweight(to_tsvector('english', coalesce(description, '')), 'C')
-	) stored;
+	) stored,
 
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
@@ -101,12 +101,12 @@ create table tracks (
 	title text not null,
 	description text,
 	tags text[],
-	mentions text[]
+	mentions text[],
 	-- Computed column with for full-text search
 	fts tsvector generated always as (
 		setweight(to_tsvector('english', coalesce(title, '')), 'A') || ' ' ||
 		setweight(to_tsvector('english', coalesce(description, '')), 'B')
-	) stored;
+	) stored
 );
 
 create index tracks_fts on tracks using gin (fts);
