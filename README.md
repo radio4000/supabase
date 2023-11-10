@@ -30,9 +30,13 @@ See the guide to [self-hosting with Supabase](https://github.com/radio4000/supab
 
 ## Tips
 
+### Supabase Auth
+
+Set the Site URL and Redirect URLs under Authentication -> URL Configuration on app.supabase.io.
+
 ### API Limit
 
-By default the database is set to return max 1000 rows. You can change this under Settings > API -> "Max Rows" on app.supabase.io.
+By default database queries return a maximum of 1000 rows. Change this under Settings > API -> "Max Rows" on app.supabase.io.
 
 ### Connect to database with `psql`
 
