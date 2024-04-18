@@ -1,3 +1,6 @@
 .supabase
 .env
 .DS_Store
+package-lock.json
+bun.lockb
+node_modules/
