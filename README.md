@@ -1,11 +1,23 @@
-# The **Supabase** configuration for Radio4000
+# supabase configuration for Radio4000 deployment
+This repository helps setup and maintain a Radio4000 project. The database can
+either run on the hosted Supabase platform, or you can use your own
+server.
 
-This repository will help you set up a working backend for Radio4000. The database can either run on the hosted Supabase platform, or you can use your own server.
+## Usage
+1. create a new supabase instance (locally, on premise or on supabase)
+2. for this repository
+3. connect the supabase instance to this repository's `prod` branch,
+   for the latest latest version, ready for "prodution"
+4. pull changes from this project upstream fork to get changes
+5. all new commits are deployed as database migrations by supabase
 
-Later we'd like to help with
+## How it works
+The `supabase/` folder contains an initial project created with `npx
+supabase bootsrap`.
 
-- putting a new version to production
-- maybe future supabase functions/workers
+Insite it, the `migrations/` folder contains the sql configuration for
+the database, that are automatically run by supabase/github connection
+on push.
 
 ## With Supabase platform (sass, free, pay-as-you-go)
 
