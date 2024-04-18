@@ -1,7 +1,7 @@
 # Radio4000 supabase docs
 
 1. create a new supabase instance (locally, on premise or on supabase)
-2. for this repository
+2. fork this repository
 3. connect the supabase instance to this repository's `prod` branch,
    for the latest latest version, ready for "prodution"
 4. pull changes from this project upstream fork to get changes
