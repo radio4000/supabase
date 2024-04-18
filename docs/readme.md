@@ -8,10 +8,11 @@
 5. all new commits are deployed as database migrations by supabase
 
 ## How it works
-The `supabase/` folder contains an initial project created with `npx
-supabase bootsrap`.
 
-Insite it, the `migrations/` folder contains the sql configuration for
+The `supabase/` folder contains an initial project created with `npx
+supabase bootstrap`.
+
+Inside it, the `migrations/` folder contains the sql configuration for
 the database, that are automatically run by supabase/github connection
 on push.
 
