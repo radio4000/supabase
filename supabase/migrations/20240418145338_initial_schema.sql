@@ -1,5 +1,7 @@
 -- Add PostGIS extension for geography data types (the map)
+set pgaudit.log = 'none';
 create extension if not exists postgis schema extensions;
+set pgaudit.log = 'ddl';
 
 -- Drop exisiting tables
 DROP TABLE if exists public.accounts;
