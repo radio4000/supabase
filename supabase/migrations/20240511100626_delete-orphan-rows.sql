@@ -14,6 +14,6 @@ AS $$
 	delete from channels where id not in (select channel_id from user_channel);
 
 	-- Delete any orphaned tracks
-	delete from tracks where track_id not in (select track_id from channel_track);
+	delete from tracks where id not in (select track_id from channel_track);
 $$;
 
