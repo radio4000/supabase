@@ -1,16 +1,14 @@
 name: Supabase push migrations to production
 
 on:
-  release:
-    types: [created]
-    tags:
-      - 'v*.*.*'
+  push:
+    branches: 
+     - prod
 
 env:
   SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
   SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
   SUPABASE_PROJECT_ID: ${{ env.SUPABASE_DB_PASSWORD }}
-
 
 jobs:
   supabase-push:
