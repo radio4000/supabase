@@ -1,5 +1,7 @@
 -- Add PostGIS extension for geography data types (the map)
+set pgaudit.log = 'none';
 create extension if not exists postgis schema extensions;
+set pgaudit.log = 'ddl';
 
 -- Drop exisiting tables
 DROP TABLE if exists public.accounts;
@@ -15,8 +17,8 @@ DELETE FROM auth.users;
 -- Create a table for public user accounts
 create table accounts (
 	id uuid not null references auth.users (id) on delete cascade,
-  theme text,
-  color_scheme text,
+	theme text,
+	color_scheme text,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
 	primary key (id)
