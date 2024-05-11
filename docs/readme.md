@@ -19,6 +19,5 @@ on push.
 ## References
 
 - https://supabase.com/docs/architecture
-- https://supabase.io/docs/reference/cli/getting-started
-- https://github.com/supabase/cli
-- https://supabase.io/new/blog/2021/03/31/supabase-cli
+- https://supabase.com/docs/reference/cli/getting-started
+- https://supabase.com/docs/guides/database/overview
