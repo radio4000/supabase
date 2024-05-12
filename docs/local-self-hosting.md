@@ -1,4 +1,4 @@
-# Self-hosted Supabase with Docker
+# Local, self-hosted Supabase with Docker
 
 If you want to host your own Supabase instance, you can do it. This is how. You have to do this setup only once. 
 
@@ -24,20 +24,7 @@ To use the [@radio4000/sdk](https://github.com/radio4000/sdk), you will need at 
 
 ### User authentication (emails)
 
-The local development server (supabase backend), allows to `signUp`
-(register) and `signIn` (login) new users (also `signOut`).
+When you develop locally, all the emails related to user authentication ARE NOT SENT. Instead, what would potentially have been sent are displayed in a local software called @inbucket on http://127.0.0.1:54324/monitor.
 
-Since these actions **send emails**,no mail will be sent to the "real
-email" used to register locally, but mails are displayed in a local
-web server/interface.
-
-The local "webmail" (provided by the supabase setup) is available at
-[http://localhost:9000/](http://localhost:9000/).
-
-It allows to click the user validating link, for all email
-adresses that have been used to register.
-
-> Note, if no server is available at this local address, is is most
-> probably because you are not running the local supabase server (see
-> above)
+> Note, if no server is available at this address, the local `supabase` server is most probably not running. Check with `supabase status`.
 
