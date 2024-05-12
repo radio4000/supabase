@@ -3,17 +3,6 @@ set pgaudit.log = 'none';
 create extension if not exists postgis schema extensions;
 set pgaudit.log = 'ddl';
 
--- Drop exisiting tables
-DROP TABLE if exists public.accounts;
-DROP TABLE if exists channels CASCADE;
-DROP TABLE if exists channel_track CASCADE;
-DROP TABLE if exists tracks CASCADE;
-DROP TABLE if exists user_channel;
-DROP TABLE if exists followers;
-
--- Make sure all users are deleted
-DELETE FROM auth.users;
-
 -- Create a table for public user accounts
 create table accounts (
 	id uuid not null references auth.users (id) on delete cascade,
