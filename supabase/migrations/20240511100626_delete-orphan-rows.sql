@@ -1,4 +1,5 @@
--- Create a procedure to delete the authenticated user
+-- Overwrite the existing function with new functionality.
+-- The two last lines ensure that any orphaned channels and tracks are also deleted.
 CREATE or replace function delete_user()
 	returns void
 LANGUAGE SQL SECURITY DEFINER
