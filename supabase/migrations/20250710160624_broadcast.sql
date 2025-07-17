@@ -8,6 +8,8 @@ create table broadcast (
 	track_played_at timestamp with time zone not null,
 	created_at timestamp with time zone default CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone default CURRENT_TIMESTAMP,
+
+	unique(channel_id),
 	PRIMARY KEY (channel_id)
 );
 
