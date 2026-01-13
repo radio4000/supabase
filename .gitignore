@@ -5,3 +5,7 @@ package-lock.json
 bun.lockb
 bun.lock
 node_modules/
+
+# Production data dumps
+supabase/prod_data.sql
+supabase/prod_auth_data.sql
