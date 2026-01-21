@@ -50,6 +50,12 @@ create policy "Deny banned users" on public.followers
 	using (not public.is_banned())
 	with check (not public.is_banned());
 
+create policy "Deny banned users" on public.broadcast
+	as restrictive for all
+	to authenticated
+	using (not public.is_banned())
+	with check (not public.is_banned());
+
 create or replace function public.ban_user(
 	target_user_id uuid,
 	ban_reason text default null,
