@@ -28,5 +28,6 @@ as $$
 	where id in (select channel_id from target_channels);
 
 	delete from public.user_channel where user_id = auth.uid();
+	delete from public.accounts where id = auth.uid();
 	delete from auth.users where id = auth.uid();
 $$;
