@@ -58,7 +58,6 @@ create policy "Deny banned users" on public.broadcast
 
 create or replace function public.ban_user(
 	target_user_id uuid,
-	ban_reason text default null,
 	ban_until timestamp with time zone default now() + interval '4000 years'
 )
 	returns void
@@ -103,7 +102,6 @@ $$;
 
 create or replace function public.ban_user_by_channel_slug(
 	channel_slug text,
-	ban_reason text default null,
 	ban_until timestamp with time zone default now() + interval '4000 years'
 )
 	returns void
@@ -140,12 +138,12 @@ begin
 	where c.slug = channel_slug
 	limit 1;
 
-	perform public.ban_user(target_user_id, ban_reason, ban_until);
+	perform public.ban_user(target_user_id, ban_until);
 end;
 $$;
 
-revoke execute on function public.ban_user(uuid, text, timestamp with time zone)
+revoke execute on function public.ban_user(uuid, timestamp with time zone)
 	from anon, public, authenticated;
 
-revoke execute on function public.ban_user_by_channel_slug(text, text, timestamp with time zone)
+revoke execute on function public.ban_user_by_channel_slug(text, timestamp with time zone)
 	from anon, public, authenticated;
