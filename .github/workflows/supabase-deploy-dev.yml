@@ -8,11 +8,15 @@ on:
 env:
   SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
   SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-  SUPABASE_PROJECT_ID: ${{ env.SUPABASE_DB_PASSWORD }}
+  SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
 
 jobs:
   supabase-push:
+    runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
-      - run: supabase link --project-ref $PROJECT_ID
+        with:
+          version: latest
+      - run: supabase link --project-ref $SUPABASE_PROJECT_ID
       - run: supabase db push
