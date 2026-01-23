@@ -18,3 +18,14 @@ supabase migration up
 # push the migrations to a "remote" database
 supabase db push
 ```
+
+## How to test migrations locally
+
+1. Verify Docker: `docker info > /dev/null 2>&1 && echo "running" || echo "not running"`
+2. If not running → ask user to start it (don't start it yourself)
+3. Start Supabase: `bunx supabase start`
+4. Apply migrations: `bunx supabase db reset` (or `bunx supabase migration up`)
+5. Test your changes with docker exec psql
+
+Local DB: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
+
