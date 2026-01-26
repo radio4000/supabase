@@ -7,5 +7,6 @@ bun.lock
 node_modules/
 
 # Production data dumps
+backups/
 supabase/prod_data.sql
 supabase/prod_auth_data.sql
