@@ -5,6 +5,7 @@
 Run `./scripts/backup-production-database.sh` to create backups.
 
 This creates timestamped files in `./backups/`:
+- `_roles.sql` - database roles
 - `_schema.sql` - database structure (tables, views, functions, RLS)
 - `_data.sql` - all data (includes both `public.*` and `auth.*` tables)
 
@@ -20,11 +21,14 @@ To restore to a new Supabase project:
 psql \
   --single-transaction \
   --variable ON_ERROR_STOP=1 \
+  --file backups/backup_TIMESTAMP_roles.sql \
   --file backups/backup_TIMESTAMP_schema.sql \
   --command 'SET session_replication_role = replica' \
   --file backups/backup_TIMESTAMP_data.sql \
   --dbname "CONNECTION_STRING"
 ```
+
+Note: If you created custom roles with passwords, you'll need to manually set their passwords in the new project.
 
 Note: If you get permission errors about `supabase_admin`, comment out those lines in the schema file.
 

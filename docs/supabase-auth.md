@@ -9,6 +9,8 @@ Configuration is made in the project's settings on https://app.supabase.io.
 
 We enable Google, Facebook and email providers.
 
+In order for users to be able to manage their own social connections, you must enable "manual linking" for the Supabase project.
+
 ### Google
 
 1. Go to https://console.cloud.google.com/auth/clients?project=firebase-radio4000
