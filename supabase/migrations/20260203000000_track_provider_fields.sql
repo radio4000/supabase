@@ -166,7 +166,10 @@ CREATE TRIGGER parse_track_url_trigger
 
 -- Backfill existing tracks by triggering the function
 -- We update url to itself which fires the trigger
-UPDATE tracks SET url = url;
+-- Disable the moddatetime trigger to preserve original updated_at timestamps
+ALTER TABLE tracks DISABLE TRIGGER track_update;
+UPDATE tracks SET url = url WHERE provider IS NULL OR media_id IS NULL;
+ALTER TABLE tracks ENABLE TRIGGER track_update;
 
 -- Update the channel_tracks view to include the new columns
 CREATE OR REPLACE VIEW channel_tracks
