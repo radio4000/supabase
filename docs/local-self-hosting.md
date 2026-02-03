@@ -6,7 +6,7 @@ If you want to host your own Supabase instance, you can do it. This is how. You 
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) on your computer
 2. Clone the R4 Supabase repository locally `git clone git@github.com:radio4000/supabase`
-3. Run `npx supabase start`
+3. Run `bunx supabase start`
 
 This start command will install the things locally on your machine via Docker,
 and run any migration files in `./supabase/migrations` folder. Finally it'll output the keys you need. Make sure to save these somewhere. They are only shown once.
@@ -18,9 +18,36 @@ To use the [@radio4000/sdk](https://github.com/radio4000/sdk), you will need at 
 
 ## Tips
 
-- `npx supabase stop` will stop the local development server
-- `npx supabase status` shows useful status info
-- Run an .sql file on the database: `psql <DATABASE_URL> -f radio4000.sql`
+- `bunx supabase stop` will stop the local development server
+- `bunx supabase status` shows useful status info
+
+## Connecting to the database
+
+The local database runs on `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+
+If you have `psql` installed:
+
+```bash
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres
+```
+
+If you don't have `psql`, use docker exec:
+
+```bash
+# Find the postgres container name
+docker ps --format "{{.Names}}" | grep db
+
+# Interactive psql session
+docker exec -it supabase_db_radio4000-supabase psql -U postgres
+
+# Run a SQL command
+docker exec -it supabase_db_radio4000-supabase psql -U postgres -c "SELECT count(*) FROM tracks;"
+
+# Run a SQL file (note: -i not -it for file input)
+docker exec -i supabase_db_radio4000-supabase psql -U postgres < path/to/file.sql
+```
+
+For remote/production database connection strings, check your Supabase project settings under Database.
 
 ### User authentication (emails)
 
