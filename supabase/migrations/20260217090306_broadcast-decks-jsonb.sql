@@ -11,9 +11,6 @@ ALTER TABLE broadcast DROP CONSTRAINT broadcast_pkey;
 -- 3. Use channel_id as the sole PK (already has a unique constraint)
 ALTER TABLE broadcast ADD PRIMARY KEY (channel_id);
 
--- 4. Drop the now-redundant unique constraint
-ALTER TABLE broadcast DROP CONSTRAINT broadcast_channel_id_key;
-
--- 5. Drop FK on track_id, then make it nullable
+-- 4. Drop FK on track_id, then make it nullable
 ALTER TABLE broadcast DROP CONSTRAINT broadcast_track_id_fkey;
 ALTER TABLE broadcast ALTER COLUMN track_id DROP NOT NULL;
