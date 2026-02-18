@@ -39,6 +39,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION "public"."parse_track_url"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public'
     AS $$
 DECLARE
 	url_text text;
@@ -187,6 +188,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION "public"."check_reserved_slug"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public'
     AS $$
 BEGIN
   IF EXISTS (SELECT 1 FROM reserved_slugs WHERE slug = NEW.slug) THEN
