@@ -1,20 +1,45 @@
--- Add provider and media_id columns to tracks table
--- These fields are automatically derived from the track URL via a trigger
+CREATE OR REPLACE FUNCTION "public"."parse_tokens"("content" "text", "prefix" "text") RETURNS "text"[]
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+	regex text;
+	tokens text[];
+BEGIN
+	regex := prefix || '(\S+)';
 
--- Add new columns
-ALTER TABLE tracks ADD COLUMN provider text;
-ALTER TABLE tracks ADD COLUMN media_id text;
+	-- Direct query without dynamic SQL
+	SELECT array_agg(captures[1])
+	INTO tokens
+	FROM (
+		SELECT regexp_matches(LOWER(content), regex, 'g') AS captures
+		ORDER BY captures
+	) AS matches;
 
--- Comment the columns
-COMMENT ON COLUMN tracks.provider IS 'Media provider derived from URL (e.g., youtube, soundcloud, vimeo)';
-COMMENT ON COLUMN tracks.media_id IS 'Provider-specific media identifier extracted from URL';
+	IF tokens IS NULL THEN
+		tokens = '{}';
+	END IF;
 
--- Function to parse track URL and extract provider and media_id
--- Based on battle-tested patterns from media-now library
-CREATE OR REPLACE FUNCTION parse_track_url()
-	RETURNS trigger
-	LANGUAGE plpgsql
-AS $$
+	RETURN tokens;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION "public"."parse_track_description"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+	BEGIN
+		new.tags = parse_tokens(new.description, '#');
+		new.mentions = parse_tokens(new.description, '@');
+		RETURN new;
+	END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION "public"."parse_track_url"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
 DECLARE
 	url_text text;
 	host text;
@@ -159,38 +184,14 @@ BEGIN
 END;
 $$;
 
--- Create trigger to run on INSERT or UPDATE of url
-CREATE TRIGGER parse_track_url_trigger
-	BEFORE INSERT OR UPDATE OF url ON tracks
-	FOR EACH ROW EXECUTE FUNCTION parse_track_url();
 
--- Backfill existing tracks by triggering the function
--- We update url to itself which fires the trigger
--- Disable the moddatetime trigger to preserve original updated_at timestamps
-ALTER TABLE tracks DISABLE TRIGGER track_update;
-UPDATE tracks SET url = url WHERE provider IS NULL OR media_id IS NULL;
-ALTER TABLE tracks ENABLE TRIGGER track_update;
-
--- Update the channel_tracks view to include the new columns
-CREATE OR REPLACE VIEW channel_tracks
-	WITH (security_invoker=on)
-	AS
-SELECT
-	tracks.id,
-	tracks.created_at,
-	tracks.updated_at,
-	tracks.url,
-	tracks.discogs_url,
-	tracks.title,
-	tracks.description,
-	tracks.tags,
-	tracks.mentions,
-	tracks.fts,
-	channels.slug,
-	tracks.duration,
-	tracks.playback_error,
-	tracks.provider,
-	tracks.media_id
-FROM tracks
-JOIN channel_track ON tracks.id = channel_track.track_id
-JOIN channels ON channels.id = channel_track.channel_id;
+CREATE OR REPLACE FUNCTION "public"."check_reserved_slug"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM reserved_slugs WHERE slug = NEW.slug) THEN
+    RAISE EXCEPTION 'Slug "%" is reserved', NEW.slug;
+  END IF;
+  RETURN NEW;
+END;
+$$;
