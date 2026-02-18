@@ -22,8 +22,8 @@ create policy "Authenticated users can insert tracks" on "public"."tracks" for I
 with
   check (("auth"."role" () = 'authenticated'::"text"));
 
-create policy "Broadcasts are viewable by everyone" on "public"."broadcast" for
-select
+create policy "Broadcasts are publicly readable" on "public"."broadcast" for
+select to anon, authenticated
   using (true);
 
 create policy "Channels are viewable by everyone." on "public"."channels" for
