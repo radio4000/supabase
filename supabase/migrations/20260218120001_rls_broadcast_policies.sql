@@ -4,7 +4,7 @@
 --    which lets any channel owner update/delete any broadcast
 
 -- Move the stray INSERT policy from user_channel to broadcast
-DROP POLICY "User can insert own channel broadcast." ON user_channel;
+DROP POLICY IF EXISTS "User can insert own channel broadcast." ON user_channel;
 
 CREATE POLICY "User can insert own channel broadcast." ON broadcast
   FOR INSERT
@@ -15,7 +15,7 @@ CREATE POLICY "User can insert own channel broadcast." ON broadcast
   );
 
 -- Fix UPDATE: reference broadcast.channel_id instead of self-join
-DROP POLICY "User can update own channel broadcast." ON broadcast;
+DROP POLICY IF EXISTS "User can update own channel broadcast." ON broadcast;
 
 CREATE POLICY "User can update own channel broadcast." ON broadcast
   FOR UPDATE
@@ -26,7 +26,7 @@ CREATE POLICY "User can update own channel broadcast." ON broadcast
   );
 
 -- Fix DELETE: reference broadcast.channel_id instead of self-join
-DROP POLICY "Users can delete channel junction." ON broadcast;
+DROP POLICY IF EXISTS "Users can delete channel junction." ON broadcast;
 
 CREATE POLICY "User can delete own channel broadcast." ON broadcast
   FOR DELETE
