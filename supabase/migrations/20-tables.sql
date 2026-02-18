@@ -170,6 +170,11 @@ create index "channels_slug_index" on "public"."channels" using "btree" ("slug")
 
 create index "tracks_fts" on "public"."tracks" using "gin" ("fts");
 
+-- Indexes for RLS policy subquery performance.
+-- Many policies look up user_id by channel_id in these junction tables.
+create index "idx_user_channel_channel_id" on "public"."user_channel" ("channel_id");
+create index "idx_channel_track_channel_id" on "public"."channel_track" ("channel_id");
+
 create
 or REPLACE TRIGGER "broadcast_update" BEFORE
 update on "public"."broadcast" for EACH row
