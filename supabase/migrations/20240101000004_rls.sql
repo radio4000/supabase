@@ -16,11 +16,11 @@ alter table "public"."user_channel" ENABLE row LEVEL SECURITY;
 
 create policy "Authenticated users can create a channel" on "public"."channels" for INSERT
 with
-  check (("auth"."role" () = 'authenticated'::"text"));
+  check (((select "auth"."role" ()) = 'authenticated'::"text"));
 
 create policy "Authenticated users can insert tracks" on "public"."tracks" for INSERT
 with
-  check (("auth"."role" () = 'authenticated'::"text"));
+  check (((select "auth"."role" ()) = 'authenticated'::"text"));
 
 create policy "Broadcasts are publicly readable" on "public"."broadcast" for
 select to anon, authenticated
@@ -68,7 +68,7 @@ select
 
 create policy "User can delete own channel broadcast." on "public"."broadcast" for DELETE using (
   (
-    "auth"."uid" () in (
+    (select "auth"."uid" ()) in (
       select
         "user_channel"."user_id"
       from
@@ -85,7 +85,7 @@ create policy "User can insert channel follow relationship." on "public"."follow
 with
   check (
     (
-      "auth"."uid" () in (
+      (select "auth"."uid" ()) in (
         select
           "user_channel"."user_id"
         from
@@ -100,13 +100,13 @@ with
 
 create policy "User can insert channel junction." on "public"."user_channel" for INSERT
 with
-  check (("auth"."uid" () = "user_id"));
+  check (((select "auth"."uid" ()) = "user_id"));
 
 create policy "User can insert own channel broadcast." on "public"."broadcast" for INSERT
 with
   check (
     (
-      "auth"."uid" () in (
+      (select "auth"."uid" ()) in (
         select
           "user_channel"."user_id"
         from
@@ -121,13 +121,13 @@ with
 
 create policy "User can insert their junction." on "public"."channel_track" for INSERT
 with
-  check (("auth"."uid" () = "user_id"));
+  check (((select "auth"."uid" ()) = "user_id"));
 
 create policy "User can update own channel broadcast." on "public"."broadcast"
 for update
   using (
     (
-      "auth"."uid" () in (
+      (select "auth"."uid" ()) in (
         select
           "user_channel"."user_id"
         from
@@ -150,7 +150,7 @@ select
 
 create policy "Users can delete channel follow relationship." on "public"."followers" for DELETE using (
   (
-    "auth"."uid" () in (
+    (select "auth"."uid" ()) in (
       select
         "user_channel"."user_id"
       from
@@ -163,11 +163,11 @@ create policy "Users can delete channel follow relationship." on "public"."follo
   )
 );
 
-create policy "Users can delete channel junction." on "public"."user_channel" for DELETE using (("auth"."uid" () = "user_id"));
+create policy "Users can delete channel junction." on "public"."user_channel" for DELETE using (((select "auth"."uid" ()) = "user_id"));
 
 create policy "Users can delete own channel." on "public"."channels" for DELETE using (
   (
-    "auth"."uid" () in (
+    (select "auth"."uid" ()) in (
       select
         "user_channel"."user_id"
       from
@@ -178,11 +178,11 @@ create policy "Users can delete own channel." on "public"."channels" for DELETE 
   )
 );
 
-create policy "Users can delete own junction." on "public"."channel_track" for DELETE using (("auth"."uid" () = "user_id"));
+create policy "Users can delete own junction." on "public"."channel_track" for DELETE using (((select "auth"."uid" ()) = "user_id"));
 
 create policy "Users can delete own track." on "public"."tracks" for DELETE using (
   (
-    "auth"."uid" () in (
+    (select "auth"."uid" ()) in (
       select
         "channel_track"."user_id"
       from
@@ -195,25 +195,25 @@ create policy "Users can delete own track." on "public"."tracks" for DELETE usin
 
 create policy "Users can only insert their own account." on "public"."accounts" for INSERT
 with
-  check (("auth"."uid" () = "id"));
+  check (((select "auth"."uid" ()) = "id"));
 
 create policy "Users can only read their own accounts." on "public"."accounts" for
 select
-  using (("auth"."uid" () = "id"));
+  using (((select "auth"."uid" ()) = "id"));
 
 create policy "Users can only update own account." on "public"."accounts"
 for update
-  using (("auth"."uid" () = "id"));
+  using (((select "auth"."uid" ()) = "id"));
 
 create policy "Users can update channel junction." on "public"."user_channel"
 for update
-  using (("auth"."uid" () = "user_id"));
+  using (((select "auth"."uid" ()) = "user_id"));
 
 create policy "Users can update own channel." on "public"."channels"
 for update
   using (
     (
-      "auth"."uid" () in (
+      (select "auth"."uid" ()) in (
         select
           "user_channel"."user_id"
         from
@@ -221,7 +221,7 @@ for update
         where
           (
             ("user_channel"."channel_id" = "channels"."id")
-            and ("user_channel"."user_id" = "auth"."uid" ())
+            and ("user_channel"."user_id" = (select "auth"."uid" ()))
           )
       )
     )
@@ -229,7 +229,7 @@ for update
 with
   check (
     (
-      "auth"."uid" () in (
+      (select "auth"."uid" ()) in (
         select
           "user_channel"."user_id"
         from
@@ -237,7 +237,7 @@ with
         where
           (
             ("user_channel"."channel_id" = "channels"."id")
-            and ("user_channel"."user_id" = "auth"."uid" ())
+            and ("user_channel"."user_id" = (select "auth"."uid" ()))
           )
       )
     )
@@ -245,13 +245,13 @@ with
 
 create policy "Users can update own junction." on "public"."channel_track"
 for update
-  using (("auth"."uid" () = "user_id"));
+  using (((select "auth"."uid" ()) = "user_id"));
 
 create policy "Users can update their own track." on "public"."tracks"
 for update
   using (
     (
-      "auth"."uid" () in (
+      (select "auth"."uid" ()) in (
         select
           "channel_track"."user_id"
         from
