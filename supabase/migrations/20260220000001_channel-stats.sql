@@ -30,23 +30,23 @@ create or replace function "public"."update_channel_stats"()
 returns trigger
 language plpgsql
 security definer
-set search_path = 'public'
+set search_path = ''
 as $$
 begin
   if (TG_OP = 'INSERT') then
-    insert into channel_stats (channel_id, track_count, latest_track_at)
+    insert into public.channel_stats (channel_id, track_count, latest_track_at)
     values (NEW.channel_id, 1, NEW.created_at)
     on conflict (channel_id) do update set
-      track_count = channel_stats.track_count + 1,
-      latest_track_at = greatest(channel_stats.latest_track_at, excluded.latest_track_at);
+      track_count = public.channel_stats.track_count + 1,
+      latest_track_at = greatest(public.channel_stats.latest_track_at, excluded.latest_track_at);
     return NEW;
 
   elsif (TG_OP = 'DELETE') then
-    update channel_stats set
+    update public.channel_stats set
       track_count = track_count - 1,
       latest_track_at = case
         when latest_track_at = OLD.created_at then
-          (select max(created_at) from channel_track where channel_id = OLD.channel_id)
+          (select max(created_at) from public.channel_track where channel_id = OLD.channel_id)
         else latest_track_at
       end
     where channel_id = OLD.channel_id;
