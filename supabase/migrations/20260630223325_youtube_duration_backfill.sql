@@ -20,6 +20,9 @@
 -- Requires a vault secret named 'youtube_api_key' (NOT in this migration).
 -- Set it once:  select vault.create_secret('YOUR_KEY', 'youtube_api_key');
 
+-- Prod enabled pg_cron in the dashboard; fresh databases need it here.
+create extension if not exists pg_cron;
+
 create index if not exists "tracks_youtube_missing_duration_idx"
   on "public"."tracks" ("media_id")
   where "provider" = 'youtube' and "duration" is null;
