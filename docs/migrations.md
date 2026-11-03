@@ -15,8 +15,8 @@ When the migration file is filled with the sql instructions, we can run:
 # Run this migration in a "local" database
 supabase migration up
 
-# push the migrations to a "remote" database
-supabase db push
+# push the migrations to the linked (production) database
+supabase db push --remote
 ```
 
 ## How to test migrations locally

@@ -13,15 +13,15 @@ DATA_FILE="$BACKUP_DIR/backup_${TIMESTAMP}_data.sql"
 mkdir -p "$BACKUP_DIR"
 
 echo "Creating roles backup: $ROLES_FILE"
-bunx supabase db dump --linked --role-only > "$ROLES_FILE"
+bunx supabase db dump --role-only --remote > "$ROLES_FILE"
 echo "Roles backup complete: $ROLES_FILE ($(du -h "$ROLES_FILE" | cut -f1))"
 
 echo "Creating schema backup: $SCHEMA_FILE"
-bunx supabase db dump --linked > "$SCHEMA_FILE"
+bunx supabase db dump --remote > "$SCHEMA_FILE"
 echo "Schema backup complete: $SCHEMA_FILE ($(du -h "$SCHEMA_FILE" | cut -f1))"
 
 echo "Creating data backup: $DATA_FILE"
-bunx supabase db dump --linked --data-only --use-copy > "$DATA_FILE"
+bunx supabase db dump --data-only --use-copy --remote > "$DATA_FILE"
 echo "Data backup complete: $DATA_FILE ($(du -h "$DATA_FILE" | cut -f1))"
 
 echo "Created backups of Radio4000 production database roles, schema, and data"

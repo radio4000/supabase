@@ -81,8 +81,8 @@ This pulls the correct container images matching your remote database version.
 Dump the public schema data and auth schema data separately:
 
 ```bash
-supabase db dump --data-only -f supabase/prod_data.sql
-supabase db dump --data-only --schema auth -f supabase/prod_auth_data.sql
+supabase db dump --data-only -f supabase/prod_data.sql --remote
+supabase db dump --data-only --schema auth -f supabase/prod_auth_data.sql --remote
 ```
 
 ### 4. Reset and restore locally
