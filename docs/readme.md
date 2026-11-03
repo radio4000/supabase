@@ -2,10 +2,9 @@
 
 1. create a new supabase instance (locally, on premise or on supabase)
 2. fork this repository
-3. connect the supabase instance to this repository's `prod` branch,
-   for the latest latest version, ready for "prodution"
+3. link the supabase instance with `supabase link`
 4. pull changes from this project upstream fork to get changes
-5. all new commits are deployed as database migrations by supabase
+5. deploy new migrations with `supabase db push --remote`
 
 ## How it works
 
@@ -13,8 +12,7 @@ The `supabase/` folder contains an initial project created with `npx
 supabase bootstrap`.
 
 Inside it, the `migrations/` folder contains the sql configuration for
-the database, that are automatically run by supabase/github connection
-on push.
+the database, deployed with `supabase db push --remote`.
 
 ## References
 
