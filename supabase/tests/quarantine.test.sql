@@ -34,7 +34,8 @@ delete from public.accounts where id = '00000000-0000-0000-0000-00000000000d';
 insert into public.followers (follower_id, channel_id) values
   ('10000000-0000-0000-0000-00000000000c', '10000000-0000-0000-0000-00000000000d');
 
--- Signs in as user ID; the token carries app_metadata, as Supabase's does.
+-- Signs in as user ID; the token carries app_metadata, as Supabase's does,
+-- and a code just verified (see admin-2fa.test.sql).
 create function pg_temp.as_user(id text) returns void language plpgsql as $$
 declare
   metadata jsonb;
@@ -42,7 +43,11 @@ begin
   reset role;
   select raw_app_meta_data into metadata from auth.users where auth.users.id = as_user.id::uuid;
   perform set_config('request.jwt.claims',
-                     json_build_object('sub', id, 'role', 'authenticated', 'app_metadata', metadata)::text, true);
+                     json_build_object('sub', id, 'role', 'authenticated', 'app_metadata', metadata,
+                                       'aal', 'aal2',
+                                       'amr', json_build_array(json_build_object(
+                                         'method', 'totp', 'timestamp', extract(epoch from now()))))::text,
+                     true);
   perform set_config('role', 'authenticated', true);
 end;
 $$;

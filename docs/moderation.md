@@ -48,11 +48,35 @@ Only `app_metadata` counts. Users can write their own `user_metadata`
 (`auth.updateUser`), so never check an admin flag there: anyone could
 become an admin.
 
+## A code to act (2FA)
+
+The flag alone only lets an admin read the queue and see quarantined
+channels. To quarantine or release, the session must have verified a
+code from an authenticator app (TOTP) in the last 15 minutes
+(`admin_code_period()`). An admin's everyday radio, left signed in on a
+shared computer, can't moderate. Other accounts never set up 2FA.
+
+Supabase signs the proof into the access token: `aal` is `aal2` after a
+code, and `amr` lists each method with its time. A token refresh keeps
+that time, so the 15 minutes count from the code, not from the last
+refresh. Otherwise the functions answer `admin code needed`; the
+client asks for a code and tries again.
+
+Each admin sets up their authenticator app once, signed in as
+themselves (`auth.mfa.enroll`, then `challenge` and `verify`): from
+r4.el or the spam-angel page. The SQL editor needs no code.
+
+TOTP must be on in the project: Authentication, Multi-Factor, "TOTP
+(App Authenticator)" enrolment and verification enabled. Locally,
+`config.toml` turns it on (`[auth.mfa.totp]`). A lost phone: remove the
+admin's factor in the dashboard (Authentication, Users, the user,
+Multi-factor), and they set up a new one.
+
 ## Quarantine, release, purge
 
 Each function takes the slug of one channel and acts on its owner's
 account, all their channels included. Call them as a signed-in admin,
-for example `POST /rest/v1/rpc/quarantine_user_by_channel_slug` with
+with a fresh code for quarantine and release, for example `POST /rest/v1/rpc/quarantine_user_by_channel_slug` with
 `{"channel_slug": "some-slug"}`.
 
 | Function | What it does |
