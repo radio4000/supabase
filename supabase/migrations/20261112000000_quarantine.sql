@@ -58,7 +58,37 @@ create or replace function "public"."user_is_admin"("target_user_id" uuid) retur
 	);
 $$;
 
-create or replace function "public"."require_admin"() returns void
+-- Admins act with a fresh code from their authenticator app (2FA, TOTP),
+-- not with their everyday sign in: a radio left signed in on a shared
+-- computer can't quarantine anyone. How long a code lets an admin act:
+create or replace function "public"."admin_code_period"() returns interval
+  language sql
+  immutable
+  set "search_path" to ''
+  as $$ select interval '15 minutes' $$;
+
+-- True if the session verified a code within the period. Supabase signs
+-- these claims: aal2 after a second factor, and amr the time of each
+-- method, which a token refresh keeps.
+create or replace function "public"."has_fresh_code"() returns boolean
+  language sql
+  stable
+  set "search_path" to ''
+  as $$
+	select coalesce(auth.jwt() ->> 'aal' = 'aal2', false)
+		and exists (
+			select 1 from jsonb_array_elements(coalesce(auth.jwt() -> 'amr', '[]'::jsonb)) as m
+			where m ->> 'method' = 'totp'
+				and to_timestamp((m ->> 'timestamp')::double precision)
+					> now() - public.admin_code_period());
+$$;
+
+grant execute on function "public"."has_fresh_code"() to anon, authenticated, service_role;
+grant execute on function "public"."admin_code_period"() to anon, authenticated, service_role;
+
+-- Refuses anyone but admins, and admins without a fresh code unless
+-- fresh_code is false (reading the queue).
+create or replace function "public"."require_admin"("fresh_code" boolean default true) returns void
   language plpgsql
   stable
   set "search_path" to ''
@@ -67,10 +97,16 @@ begin
 	-- No role claim: a direct database session (dashboard SQL editor, psql,
 	-- pg_cron), open only to those with database access. Requests through
 	-- the API always carry one, anon included.
-	if auth.role() is null or auth.role() = 'service_role' or public.is_admin() then
+	if auth.role() is null or auth.role() = 'service_role' then
 		return;
 	end if;
-	raise exception 'not authorized';
+	if not public.is_admin() then
+		raise exception 'not authorized';
+	end if;
+	if fresh_code and not public.has_fresh_code() then
+		raise exception 'admin code needed'
+			using hint = 'Verify a code from your authenticator app, then try again.';
+	end if;
 end;
 $$;
 
@@ -349,7 +385,7 @@ create or replace function "public"."quarantined_accounts"()
   set "search_path" to ''
   as $$
 begin
-	perform public.require_admin();
+	perform public.require_admin(fresh_code => false);
 	return query
 		select a.id, public.user_channel_slugs(a.id), a.quarantined_at, a.quarantined_by,
 			a.quarantined_at + public.quarantine_period()
@@ -389,7 +425,7 @@ $$;
 -- Clients may call the moderation functions, which refuse anyone but admins;
 -- the helpers are internal.
 revoke all on function "public"."user_is_admin"(uuid) from public, anon, authenticated;
-revoke all on function "public"."require_admin"() from public, anon;
+revoke all on function "public"."require_admin"(boolean) from public, anon;
 revoke all on function "public"."channel_slug_owner"(text) from public, anon, authenticated;
 revoke all on function "public"."user_channel_slugs"(uuid) from public, anon, authenticated;
 revoke all on function "public"."log_moderation"(text, uuid) from public, anon, authenticated;
@@ -399,7 +435,7 @@ revoke all on function "public"."purge_quarantined"() from public, anon, authent
 revoke all on function "public"."quarantine_user_by_channel_slug"(text) from public, anon;
 revoke all on function "public"."release_user_by_channel_slug"(text) from public, anon;
 revoke all on function "public"."quarantined_accounts"() from public, anon;
-grant execute on function "public"."require_admin"() to authenticated, service_role;
+grant execute on function "public"."require_admin"(boolean) to authenticated, service_role;
 grant execute on function "public"."quarantine_user_by_channel_slug"(text) to authenticated, service_role;
 grant execute on function "public"."release_user_by_channel_slug"(text) to authenticated, service_role;
 grant execute on function "public"."quarantined_accounts"() to authenticated, service_role;
