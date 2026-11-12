@@ -2,7 +2,7 @@
 -- the quarantine period. Run with: bunx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(39);
 
 -- a: admin, b: another admin, c: a user, d: a spammer
 insert into auth.users (id, email, raw_app_meta_data) values
@@ -63,6 +63,10 @@ select pg_temp.as_anon();
 select is(public.is_admin(), false, 'anon is not an admin');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
 select is(public.is_admin(), false, 'a user is not an admin');
+-- Users write their own user_metadata: it must not make them admins.
+select set_config('request.jwt.claims',
+  '{"sub": "00000000-0000-0000-0000-00000000000c", "role": "authenticated", "user_metadata": {"admin": true}}', true);
+select is(public.is_admin(), false, 'admin in user_metadata is not an admin');
 select throws_ok($$ select public.quarantine_user_by_channel_slug('spam-radio') $$,
   'not authorized', 'a user cannot quarantine');
 select throws_ok($$ select public.ban_user_by_channel_slug('spam-radio') $$,
@@ -148,9 +152,14 @@ select ok((select banned_until > now() + interval '3999 years' from auth.users
            where id = '00000000-0000-0000-0000-00000000000d'),
   'the account is banned for 4000 years');
 
--- Ban at once
+-- Ban at once, even while live
+insert into public.broadcast (channel_id, track_id, track_played_at)
+values ('10000000-0000-0000-0000-00000000000c', '20000000-0000-0000-0000-00000000000c', now());
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 select lives_ok($$ select public.ban_user_by_channel_slug('user-radio') $$, 'an admin can ban at once');
+reset role;
+select is((select count(*) from public.broadcast), 0::bigint, 'the broadcast goes too');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 
 -- The log
 select bag_eq(

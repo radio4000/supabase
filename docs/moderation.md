@@ -26,6 +26,10 @@ in. Clients read the flag from the session, or call `rpc('is_admin')`.
 
 Admins can't quarantine or ban each other: remove the flag first.
 
+Only `app_metadata` counts. Users can write their own `user_metadata`
+(`auth.updateUser`), so never check an admin flag there: anyone could
+become an admin.
+
 ## Quarantine, release, purge
 
 Each function takes the slug of one channel and acts on its owner's

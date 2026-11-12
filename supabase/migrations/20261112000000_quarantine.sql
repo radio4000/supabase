@@ -28,6 +28,8 @@ create or replace function "public"."quarantine_period"() returns interval
 
 -- Admins
 
+-- app_metadata, never user_metadata: users can write their own user_metadata
+-- (auth.updateUser), so an admin flag there would make anyone an admin.
 create or replace function "public"."is_admin"() returns boolean
   language sql
   stable
@@ -94,7 +96,13 @@ create trigger "accounts_protect_quarantine"
   before insert or update on "public"."accounts"
   for each row execute function "public"."protect_quarantine"();
 
-create or replace function "public"."quarantined_channel_ids"() returns setof uuid
+-- The policies need these as every role, but the API must not serve them, or
+-- anyone could list the quarantined accounts: they live in a schema that
+-- PostgREST does not expose (config.toml: api.schemas).
+create schema if not exists "private";
+grant usage on schema "private" to anon, authenticated, service_role;
+
+create or replace function "private"."quarantined_channel_ids"() returns setof uuid
   language sql
   stable
   security definer
@@ -106,7 +114,7 @@ create or replace function "public"."quarantined_channel_ids"() returns setof uu
 	where a.quarantined_at is not null;
 $$;
 
-create or replace function "public"."quarantined_track_ids"() returns setof uuid
+create or replace function "private"."quarantined_track_ids"() returns setof uuid
   language sql
   stable
   security definer
@@ -119,8 +127,10 @@ create or replace function "public"."quarantined_track_ids"() returns setof uuid
 	where a.quarantined_at is not null;
 $$;
 
-grant execute on function "public"."quarantined_channel_ids"() to anon, authenticated, service_role;
-grant execute on function "public"."quarantined_track_ids"() to anon, authenticated, service_role;
+revoke all on function "private"."quarantined_channel_ids"() from public;
+revoke all on function "private"."quarantined_track_ids"() from public;
+grant execute on function "private"."quarantined_channel_ids"() to anon, authenticated, service_role;
+grant execute on function "private"."quarantined_track_ids"() to anon, authenticated, service_role;
 
 -- What quarantined accounts own is hidden, except to admins. The views
 -- (channel_tracks, channels_with_tracks, random_channels_with_tracks) are
@@ -131,23 +141,23 @@ grant execute on function "public"."quarantined_track_ids"() to anon, authentica
 create policy "Hide quarantined accounts" on "public"."channels"
 as restrictive for select to anon, authenticated
 using ((select public.is_admin())
-	or id not in (select public.quarantined_channel_ids()));
+	or id not in (select private.quarantined_channel_ids()));
 
 create policy "Hide quarantined accounts" on "public"."channel_track"
 as restrictive for select to anon, authenticated
 using ((select public.is_admin())
-	or channel_id not in (select public.quarantined_channel_ids()));
+	or channel_id not in (select private.quarantined_channel_ids()));
 
 create policy "Hide quarantined accounts" on "public"."tracks"
 as restrictive for select to anon, authenticated
 using ((select public.is_admin())
-	or id not in (select public.quarantined_track_ids()));
+	or id not in (select private.quarantined_track_ids()));
 
 create policy "Hide quarantined accounts" on "public"."followers"
 as restrictive for select to anon, authenticated
 using ((select public.is_admin())
-	or (channel_id not in (select public.quarantined_channel_ids())
-		and follower_id not in (select public.quarantined_channel_ids())));
+	or (channel_id not in (select private.quarantined_channel_ids())
+		and follower_id not in (select private.quarantined_channel_ids())));
 
 -- Moderation log
 
@@ -245,6 +255,11 @@ begin
 		join public.user_channel uc on uc.channel_id = ct.channel_id
 		where uc.user_id = target_user_id
 	);
+
+	-- broadcast.channel_id has no on delete: remove it first, or a live
+	-- account could not be deleted.
+	delete from public.broadcast
+	where channel_id in (select channel_id from public.user_channel where user_id = target_user_id);
 
 	delete from public.channels
 	where id in (select channel_id from public.user_channel where user_id = target_user_id);
@@ -359,6 +374,8 @@ end;
 $$;
 
 -- Run daily: ban for good the accounts quarantined for longer than the period.
+-- An account that fails is skipped with a warning (in the cron logs), so it
+-- can't hold back the others; it is tried again the next day.
 create or replace function "public"."purge_quarantined"() returns integer
   language plpgsql
   security definer
@@ -372,8 +389,12 @@ begin
 		select id from public.accounts
 		where quarantined_at < now() - public.quarantine_period()
 	loop
-		perform public.delete_user_content(target_user_id, now() + interval '4000 years', 'purge');
-		purged := purged + 1;
+		begin
+			perform public.delete_user_content(target_user_id, now() + interval '4000 years', 'purge');
+			purged := purged + 1;
+		exception when others then
+			raise warning 'purge_quarantined: account % failed: %', target_user_id, sqlerrm;
+		end;
 	end loop;
 	return purged;
 end;
