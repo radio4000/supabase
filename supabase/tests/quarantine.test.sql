@@ -2,7 +2,7 @@
 -- the quarantine period. Run with: bunx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(40);
 
 -- a: admin, b: another admin, c: a user, d: a spammer
 insert into auth.users (id, email, raw_app_meta_data) values
@@ -155,6 +155,14 @@ select ok((select banned_until > now() + interval '3999 years' from auth.users
 select is((select count(*) from public.broadcast), 0::bigint, 'its broadcast too');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 
+-- The dashboard SQL editor: a direct session, without a role claim
+reset role;
+select set_config('request.jwt.claims', '', true);
+select is(auth.role(), null, 'a direct session has no role claim');
+select lives_ok($$ select public.quarantine_user_by_channel_slug('user-radio') $$,
+  'the SQL editor can moderate');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+
 -- The log
 select bag_eq(
   $$ select action, admin_id, channel_slugs from public.moderation_log $$,
@@ -162,7 +170,8 @@ select bag_eq(
      ('quarantine', '00000000-0000-0000-0000-00000000000a'::uuid, array['spam-radio', 'spam-radio-2']),
      ('quarantine', '00000000-0000-0000-0000-00000000000a'::uuid, array['spam-radio', 'spam-radio-2']),
      ('release', '00000000-0000-0000-0000-00000000000a'::uuid, array['spam-radio', 'spam-radio-2']),
-     ('purge', null::uuid, array['spam-radio', 'spam-radio-2']) $$,
+     ('purge', null::uuid, array['spam-radio', 'spam-radio-2']),
+     ('quarantine', null::uuid, array['user-radio']) $$,
   'admins read who did what');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
 select is((select count(*) from public.moderation_log), 0::bigint, 'users do not read the log');

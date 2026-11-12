@@ -64,9 +64,13 @@ create or replace function "public"."require_admin"() returns void
   set "search_path" to ''
   as $$
 begin
-	if auth.role() is distinct from 'service_role' and not public.is_admin() then
-		raise exception 'not authorized';
+	-- No role claim: a direct database session (dashboard SQL editor, psql,
+	-- pg_cron), open only to those with database access. Requests through
+	-- the API always carry one, anon included.
+	if auth.role() is null or auth.role() = 'service_role' or public.is_admin() then
+		return;
 	end if;
+	raise exception 'not authorized';
 end;
 $$;
 
