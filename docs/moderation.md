@@ -9,39 +9,29 @@ service role key. See the migration `*_quarantine.sql`.
 
 An admin is an account with `"admin": true` in its `app_metadata`
 (`auth.users.raw_app_meta_data`). Only the service role can set it,
-and Supabase copies it into the access token. There is no function
-for it: it happens rarely, and only by people who hold the service
-role key. Two ways, both tested:
+and Supabase copies it into the access token. Set it in the dashboard
+SQL editor, by channel slug:
 
-1. SQL (dashboard SQL editor, or `psql`), by channel slug:
+```sql
+update auth.users
+set raw_app_meta_data = raw_app_meta_data || '{"admin": true}'
+where id in (select uc.user_id from user_channel uc
+             join channels c on c.id = uc.channel_id
+             where c.slug in ('oskar', 'ko002'));
+```
 
-   ```sql
-   update auth.users
-   set raw_app_meta_data = raw_app_meta_data || '{"admin": true}'
-   where id in (select uc.user_id from user_channel uc
-                join channels c on c.id = uc.channel_id
-                where c.slug in ('oskar', 'ko002'));
-   ```
+Remove it with `set raw_app_meta_data = raw_app_meta_data - 'admin'`.
+Write `raw_app_meta_data`, not `raw_user_meta_data`.
 
-   Remove it with `set raw_app_meta_data = raw_app_meta_data - 'admin'`.
-   Write `raw_app_meta_data`, not `raw_user_meta_data`.
+Use the SQL editor, behind the dashboard login, rather than the Auth
+admin API: that API needs the service role key, which must never leave
+the dashboard and the server (no client, repository, shell history or
+chat). Clients never need it: admins act with their own sign in. There
+is no function for this either: it happens rarely, by the people who
+already hold the dashboard.
 
-2. The Auth admin API, by user id (from the `select` above). It merges
-   the keys into `app_metadata`, and `null` removes one:
-
-   ```sh
-   curl -X PUT "$SUPABASE_URL/auth/v1/admin/users/$USER_ID" \
-     -H "apikey: $SERVICE_ROLE_KEY" -H "authorization: Bearer $SERVICE_ROLE_KEY" \
-     -H 'content-type: application/json' -d '{"app_metadata": {"admin": true}}'
-   ```
-
-   Or `supabase.auth.admin.updateUserById(id, {app_metadata: {admin: true}})`.
-   This writes a `user_modified` entry in `auth.audit_log_entries`
-   (without saying what changed); the SQL leaves none.
-
-Supabase documents no dashboard form for `app_metadata`. The change reaches a
-session at its next token refresh (up to an hour), or at the next sign
-in. Clients read the flag from the session, or call `rpc('is_admin')`.
+The change reaches a session at its next token refresh (up to an
+hour), or at the next sign in. Clients read the flag from the session, or call `rpc('is_admin')`.
 To list the admins:
 
 ```sql
