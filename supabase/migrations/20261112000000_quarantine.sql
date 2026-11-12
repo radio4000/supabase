@@ -20,6 +20,10 @@
 -- Releasing undoes both: nothing was deleted.
 -- Once the period is over, a daily job bans the account for good, which
 -- deletes its channels and tracks. Every action goes to moderation_log.
+--
+-- This is the one way to moderate: ban_user and ban_user_by_channel_slug,
+-- which deleted at once, are dropped. Quarantine hides at once, and leaves
+-- 30 days to undo a mistake.
 
 create or replace function "public"."quarantine_period"() returns interval
   language sql
@@ -166,7 +170,7 @@ create table "public"."moderation_log" (
   "created_at" timestamptz not null default now(),
   -- null for the service role and the daily job, or once the admin is deleted.
   "admin_id" uuid references auth.users (id) on delete set null,
-  "action" text not null check ("action" in ('quarantine', 'release', 'ban', 'purge')),
+  "action" text not null check ("action" in ('quarantine', 'release', 'purge')),
   -- No foreign keys: the log outlives the user and the channels.
   "user_id" uuid not null,
   "channel_slugs" text[] not null default '{}'
@@ -228,22 +232,25 @@ create or replace function "public"."log_moderation"("log_action" text, "target_
 		log_action, target_user_id, public.user_channel_slugs(target_user_id));
 $$;
 
--- Bans TARGET_USER_ID until BAN_UNTIL and deletes their channels and tracks,
--- without checking who asks: only called by the functions below.
-create or replace function "public"."delete_user_content"("target_user_id" uuid, "ban_until" timestamptz, "log_action" text) returns void
+drop function "public"."ban_user_by_channel_slug"(text, timestamptz);
+drop function "public"."ban_user"(uuid, timestamptz);
+
+-- Bans TARGET_USER_ID for good and deletes their channels and tracks,
+-- without checking who asks: only called by purge_quarantined.
+create or replace function "public"."purge_account"("target_user_id" uuid) returns void
   language plpgsql
   security definer
   set "search_path" to ''
   as $$
 begin
-	perform public.log_moderation(log_action, target_user_id);
+	perform public.log_moderation('purge', target_user_id);
 
-	-- This disables new logins; RLS blocks existing sessions immediately.
+	-- Keeps the account, so its email can't sign up again.
 	update auth.users
-	set banned_until = ban_until
+	set banned_until = now() + interval '4000 years'
 	where id = target_user_id;
 
-	-- The ban replaces the quarantine; the purge would otherwise come back.
+	-- The purge would otherwise come back every day.
 	update public.accounts
 	set quarantined_at = null, quarantined_by = null
 	where id = target_user_id;
@@ -265,31 +272,6 @@ begin
 	where id in (select channel_id from public.user_channel where user_id = target_user_id);
 
 	delete from public.user_channel where user_id = target_user_id;
-end;
-$$;
-
-create or replace function "public"."ban_user"("target_user_id" uuid, "ban_until" timestamptz default (now() + '4000 years'::interval)) returns void
-  language plpgsql
-  security definer
-  set "search_path" to ''
-  as $$
-begin
-	perform public.require_admin();
-	if public.user_is_admin(target_user_id) then
-		raise exception 'cannot moderate an admin';
-	end if;
-	perform public.delete_user_content(target_user_id, ban_until, 'ban');
-end;
-$$;
-
-create or replace function "public"."ban_user_by_channel_slug"("channel_slug" text, "ban_until" timestamptz default (now() + '4000 years'::interval)) returns void
-  language plpgsql
-  security definer
-  set "search_path" to ''
-  as $$
-begin
-	perform public.require_admin();
-	perform public.ban_user(public.channel_slug_owner(channel_slug), ban_until);
 end;
 $$;
 
@@ -390,7 +372,7 @@ begin
 		where quarantined_at < now() - public.quarantine_period()
 	loop
 		begin
-			perform public.delete_user_content(target_user_id, now() + interval '4000 years', 'purge');
+			perform public.purge_account(target_user_id);
 			purged := purged + 1;
 		exception when others then
 			raise warning 'purge_quarantined: account % failed: %', target_user_id, sqlerrm;
@@ -407,17 +389,13 @@ revoke all on function "public"."require_admin"() from public, anon;
 revoke all on function "public"."channel_slug_owner"(text) from public, anon, authenticated;
 revoke all on function "public"."user_channel_slugs"(uuid) from public, anon, authenticated;
 revoke all on function "public"."log_moderation"(text, uuid) from public, anon, authenticated;
-revoke all on function "public"."delete_user_content"(uuid, timestamptz, text) from public, anon, authenticated;
+revoke all on function "public"."purge_account"(uuid) from public, anon, authenticated;
 revoke all on function "public"."purge_quarantined"() from public, anon, authenticated;
 
-revoke all on function "public"."ban_user"(uuid, timestamptz) from public, anon;
-revoke all on function "public"."ban_user_by_channel_slug"(text, timestamptz) from public, anon;
 revoke all on function "public"."quarantine_user_by_channel_slug"(text) from public, anon;
 revoke all on function "public"."release_user_by_channel_slug"(text) from public, anon;
 revoke all on function "public"."quarantined_accounts"() from public, anon;
 grant execute on function "public"."require_admin"() to authenticated, service_role;
-grant execute on function "public"."ban_user"(uuid, timestamptz) to authenticated, service_role;
-grant execute on function "public"."ban_user_by_channel_slug"(text, timestamptz) to authenticated, service_role;
 grant execute on function "public"."quarantine_user_by_channel_slug"(text) to authenticated, service_role;
 grant execute on function "public"."release_user_by_channel_slug"(text) to authenticated, service_role;
 grant execute on function "public"."quarantined_accounts"() to authenticated, service_role;

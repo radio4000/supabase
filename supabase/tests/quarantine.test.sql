@@ -1,8 +1,8 @@
--- Admins quarantine, release and ban; quarantined accounts are purged after
+-- Admins quarantine and release; quarantined accounts are purged after
 -- the quarantine period. Run with: bunx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(39);
+select plan(38);
 
 -- a: admin, b: another admin, c: a user, d: a spammer
 insert into auth.users (id, email, raw_app_meta_data) values
@@ -69,10 +69,10 @@ select set_config('request.jwt.claims',
 select is(public.is_admin(), false, 'admin in user_metadata is not an admin');
 select throws_ok($$ select public.quarantine_user_by_channel_slug('spam-radio') $$,
   'not authorized', 'a user cannot quarantine');
-select throws_ok($$ select public.ban_user_by_channel_slug('spam-radio') $$,
-  'not authorized', 'a user cannot ban');
+select hasnt_function('public', 'ban_user', 'the immediate ban is gone');
+select hasnt_function('public', 'ban_user_by_channel_slug', 'by slug too');
 select throws_ok($$ select public.purge_quarantined() $$, '42501', null, 'a user cannot purge');
-select throws_ok($$ select public.delete_user_content('00000000-0000-0000-0000-00000000000d', now(), 'ban') $$,
+select throws_ok($$ select public.purge_account('00000000-0000-0000-0000-00000000000d') $$,
   '42501', null, 'a user cannot call the internal functions');
 select throws_ok($$ update public.accounts set quarantined_at = now()
                     where id = '00000000-0000-0000-0000-00000000000c' $$,
@@ -83,8 +83,6 @@ select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 select is(public.is_admin(), true, 'an admin is an admin');
 select throws_ok($$ select public.quarantine_user_by_channel_slug('admin-radio') $$,
   'cannot moderate an admin', 'an admin cannot quarantine an admin');
-select throws_ok($$ select public.ban_user_by_channel_slug('admin-radio') $$,
-  'cannot moderate an admin', 'an admin cannot ban an admin');
 
 -- Quarantine
 select pg_temp.as_anon();
@@ -142,6 +140,9 @@ reset role;
 select is(public.purge_quarantined(), 0, 'a recent quarantine is not purged');
 update public.accounts set quarantined_at = now() - interval '31 days'
 where id = '00000000-0000-0000-0000-00000000000d';
+-- A broadcast row blocks deleting its channel: the purge removes it first.
+insert into public.broadcast (channel_id, track_id, track_played_at)
+values ('10000000-0000-0000-0000-00000000000d', '20000000-0000-0000-0000-00000000000d', now());
 select is(public.purge_quarantined(), 1, 'an old quarantine is purged');
 select is(public.purge_quarantined(), 0, 'once');
 select is((select count(*) from public.channels where slug like 'spam-radio%'), 0::bigint,
@@ -151,14 +152,7 @@ select is((select count(*) from public.tracks where id = '20000000-0000-0000-000
 select ok((select banned_until > now() + interval '3999 years' from auth.users
            where id = '00000000-0000-0000-0000-00000000000d'),
   'the account is banned for 4000 years');
-
--- Ban at once, even while live
-insert into public.broadcast (channel_id, track_id, track_played_at)
-values ('10000000-0000-0000-0000-00000000000c', '20000000-0000-0000-0000-00000000000c', now());
-select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
-select lives_ok($$ select public.ban_user_by_channel_slug('user-radio') $$, 'an admin can ban at once');
-reset role;
-select is((select count(*) from public.broadcast), 0::bigint, 'the broadcast goes too');
+select is((select count(*) from public.broadcast), 0::bigint, 'its broadcast too');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 
 -- The log
@@ -168,8 +162,7 @@ select bag_eq(
      ('quarantine', '00000000-0000-0000-0000-00000000000a'::uuid, array['spam-radio', 'spam-radio-2']),
      ('quarantine', '00000000-0000-0000-0000-00000000000a'::uuid, array['spam-radio', 'spam-radio-2']),
      ('release', '00000000-0000-0000-0000-00000000000a'::uuid, array['spam-radio', 'spam-radio-2']),
-     ('purge', null::uuid, array['spam-radio', 'spam-radio-2']),
-     ('ban', '00000000-0000-0000-0000-00000000000a'::uuid, array['user-radio']) $$,
+     ('purge', null::uuid, array['spam-radio', 'spam-radio-2']) $$,
   'admins read who did what');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
 select is((select count(*) from public.moderation_log), 0::bigint, 'users do not read the log');

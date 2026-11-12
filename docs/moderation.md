@@ -42,7 +42,7 @@ where u.raw_app_meta_data ->> 'admin' = 'true'
 group by u.email;
 ```
 
-Admins can't quarantine or ban each other: remove the flag first.
+Admins can't quarantine each other: remove the flag first.
 
 Only `app_metadata` counts. Users can write their own `user_metadata`
 (`auth.updateUser`), so never check an admin flag there: anyone could
@@ -61,7 +61,10 @@ for example `POST /rest/v1/rpc/quarantine_user_by_channel_slug` with
 | `release_user_by_channel_slug` | Undoes the quarantine: everything is visible again and the account can sign in. |
 | `quarantined_accounts` | The queue of the admins: each quarantined account, its channel slugs, who quarantined it, when, and when it will be purged (`purge_at`). |
 | `purge_quarantined` | Daily at 03:17 (`pg_cron`): accounts quarantined for more than 30 days are banned for 4000 years, and their channels and tracks deleted. |
-| `ban_user_by_channel_slug`, `ban_user` | Ban at once, as the purge does. |
+
+Quarantine is the one way to moderate. The former `ban_user` and
+`ban_user_by_channel_slug`, which deleted at once, are gone: quarantine
+hides at once, and leaves 30 days to undo a mistake.
 
 A banned or quarantined account keeps its row in `auth.users`, so its
 email can't sign up again. At sign in, Supabase answers `user_banned`;
@@ -80,7 +83,7 @@ The quarantine period is `quarantine_period()`, 30 days.
 
 ## Moderation log
 
-Every quarantine, release, ban and purge adds a row to
+Every quarantine, release and purge adds a row to
 `moderation_log`: `admin_id` (null for the service role and the daily
 purge), `action`, the account (`user_id`) and its `channel_slugs` at
 that moment. Admins can read it; nobody can change it from a client.
