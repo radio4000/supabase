@@ -64,7 +64,7 @@ client asks for a code and tries again.
 
 Each admin sets up their authenticator app once, signed in as
 themselves (`auth.mfa.enroll`, then `challenge` and `verify`): from
-r4.el or the spam-angel page. The SQL editor needs no code.
+r4.el (`r4-auth-setup-code`) or their account settings on radio4000.com (`/account/2fa`). The SQL editor needs no code.
 
 TOTP must be on in the project: Authentication, Multi-Factor, "TOTP
 (App Authenticator)" enrolment and verification enabled. Locally,
