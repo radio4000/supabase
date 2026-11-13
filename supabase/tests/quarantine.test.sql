@@ -2,7 +2,7 @@
 -- the quarantine period. Run with: bunx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(40);
+select plan(41);
 
 -- a: admin, b: another admin, c: a user, d: a spammer
 insert into auth.users (id, email, raw_app_meta_data) values
@@ -29,8 +29,6 @@ insert into public.channel_track (user_id, channel_id, track_id) values
    '20000000-0000-0000-0000-00000000000c'),
   ('00000000-0000-0000-0000-00000000000d', '10000000-0000-0000-0000-00000000000d',
    '20000000-0000-0000-0000-00000000000d');
--- Accounts made before the accounts table have no row.
-delete from public.accounts where id = '00000000-0000-0000-0000-00000000000d';
 insert into public.followers (follower_id, channel_id) values
   ('10000000-0000-0000-0000-00000000000c', '10000000-0000-0000-0000-00000000000d');
 
@@ -58,9 +56,11 @@ $$;
 create function pg_temp.visible() returns text[] language sql as $$
   select array[
     (select count(*) from public.channels where slug like 'spam-radio%')::text,
-    (select count(*) from public.tracks where id = '20000000-0000-0000-0000-00000000000d')::text,
     (select count(*) from public.channel_tracks where slug = 'spam-radio')::text,
-    (select count(*) from public.followers where channel_id = '10000000-0000-0000-0000-00000000000d')::text];
+    (select count(*) from public.channels_with_tracks where slug like 'spam-radio%')::text,
+    -- Who user-radio follows, as the SDK reads it.
+    (select count(*) from public.followers f join public.channels c on c.id = f.channel_id
+     where f.follower_id = '10000000-0000-0000-0000-00000000000c')::text];
 $$;
 
 -- Who is an admin
@@ -79,9 +79,8 @@ select hasnt_function('public', 'ban_user_by_channel_slug', 'by slug too');
 select throws_ok($$ select public.purge_quarantined() $$, '42501', null, 'a user cannot purge');
 select throws_ok($$ select public.purge_account('00000000-0000-0000-0000-00000000000d') $$,
   '42501', null, 'a user cannot call the internal functions');
-select throws_ok($$ update public.accounts set quarantined_at = now()
-                    where id = '00000000-0000-0000-0000-00000000000c' $$,
-  'only admins quarantine accounts', 'a user cannot quarantine their own account');
+select throws_ok($$ update public.channels set quarantined_at = now() where slug = 'user-radio' $$,
+  'only admins quarantine channels', 'a user cannot quarantine their own channel');
 select throws_ok($$ select * from public.quarantined_accounts() $$,
   'not authorized', 'a user cannot read the queue');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
@@ -91,10 +90,10 @@ select throws_ok($$ select public.quarantine_user_by_channel_slug('admin-radio')
 
 -- Quarantine
 select pg_temp.as_anon();
-select is(pg_temp.visible(), array['2', '1', '1', '1'], 'before, everyone sees the spam');
+select is(pg_temp.visible(), array['2', '1', '2', '1'], 'before, everyone sees the spam');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 select lives_ok($$ select public.quarantine_user_by_channel_slug('spam-radio') $$, 'an admin can quarantine');
-select is(pg_temp.visible(), array['2', '1', '1', '1'], 'admins still see it');
+select is(pg_temp.visible(), array['2', '1', '2', '1'], 'admins still see it');
 select throws_ok($$ select public.quarantine_user_by_channel_slug('spam-radio-2') $$,
   'the account of spam-radio-2 is already quarantined', 'quarantining twice says so');
 select results_eq(
@@ -116,6 +115,11 @@ select ok((select banned_until between now() + interval '29 days' and now() + in
   'the account is banned for the quarantine period');
 select is((select count(*) from public.tracks where id = '20000000-0000-0000-0000-00000000000d'), 1::bigint,
   'nothing is deleted');
+-- Tracks have no policy: a raw read by id still finds them.
+select pg_temp.as_anon();
+select is((select count(*) from public.tracks where id = '20000000-0000-0000-0000-00000000000d'), 1::bigint,
+  'a raw read of tracks by id still finds it');
+reset role;
 
 -- The spammer, banned, can't write
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
@@ -133,7 +137,7 @@ select lives_ok($$ select public.release_user_by_channel_slug('spam-radio-2') $$
 select throws_ok($$ select public.release_user_by_channel_slug('spam-radio') $$,
   'the account of spam-radio is not quarantined', 'releasing twice says so');
 select pg_temp.as_anon();
-select is(pg_temp.visible(), array['2', '1', '1', '1'], 'released channels are visible again');
+select is(pg_temp.visible(), array['2', '1', '2', '1'], 'released channels are visible again');
 reset role;
 select is((select banned_until from auth.users where id = '00000000-0000-0000-0000-00000000000d'), null,
   'the account is no longer banned');
@@ -143,8 +147,8 @@ select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 select public.quarantine_user_by_channel_slug('spam-radio');
 reset role;
 select is(public.purge_quarantined(), 0, 'a recent quarantine is not purged');
-update public.accounts set quarantined_at = now() - interval '31 days'
-where id = '00000000-0000-0000-0000-00000000000d';
+update public.channels set quarantined_at = now() - interval '31 days'
+where slug like 'spam-radio%';
 -- A broadcast row blocks deleting its channel: the purge removes it first.
 insert into public.broadcast (channel_id, track_id, track_played_at)
 values ('10000000-0000-0000-0000-00000000000d', '20000000-0000-0000-0000-00000000000d', now());

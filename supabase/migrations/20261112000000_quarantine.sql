@@ -1,29 +1,6 @@
--- Moderation: admins quarantine spam accounts, which are deleted after a while.
---
--- Admins are accounts with "admin": true in their app_metadata, which only
--- the service role can set and which Supabase copies into the access token:
---
---   update auth.users
---   set raw_app_meta_data = raw_app_meta_data || '{"admin": true}'
---   where id = '...';
---
--- The flag reaches a session at its next token refresh (up to an hour).
---
--- Quarantine is a decision about an account, so it lives on accounts
--- (quarantined_at, quarantined_by). Quarantining an account, by the slug of
--- one of its channels:
--- - hides all its channels, their tracks and follows from everyone but
---   admins, and deletes its live broadcast;
--- - bans it for the quarantine period, so it can't sign in, write, or make a
---   new channel (the "Deny banned users" policies). Quarantine and ban share
---   auth.users.banned_until: releasing clears it.
--- Releasing undoes both: nothing was deleted.
--- Once the period is over, a daily job bans the account for good, which
--- deletes its channels and tracks. Every action goes to moderation_log.
---
--- This is the one way to moderate: ban_user and ban_user_by_channel_slug,
--- which deleted at once, are dropped. Quarantine hides at once, and leaves
--- 30 days to undo a mistake.
+-- Admins quarantine spam accounts: their channels are hidden, the account is
+-- banned, and a daily job purges it after 30 days. See docs/moderation.md.
+-- Replaces ban_user and ban_user_by_channel_slug.
 
 create or replace function "public"."quarantine_period"() returns interval
   language sql
@@ -32,8 +9,7 @@ create or replace function "public"."quarantine_period"() returns interval
 
 -- Admins
 
--- app_metadata, never user_metadata: users can write their own user_metadata
--- (auth.updateUser), so an admin flag there would make anyone an admin.
+-- app_metadata, never user_metadata, which users can write themselves.
 create or replace function "public"."is_admin"() returns boolean
   language sql
   stable
@@ -42,7 +18,6 @@ create or replace function "public"."is_admin"() returns boolean
 	select coalesce(auth.jwt() -> 'app_metadata' ->> 'admin', '') = 'true';
 $$;
 
--- Used by the policies, so every role needs it.
 grant execute on function "public"."is_admin"() to anon, authenticated, service_role;
 
 create or replace function "public"."user_is_admin"("target_user_id" uuid) returns boolean
@@ -58,18 +33,14 @@ create or replace function "public"."user_is_admin"("target_user_id" uuid) retur
 	);
 $$;
 
--- Admins act with a fresh code from their authenticator app (2FA, TOTP),
--- not with their everyday sign in: a radio left signed in on a shared
--- computer can't quarantine anyone. How long a code lets an admin act:
+-- How long a 2FA code lets an admin act.
 create or replace function "public"."admin_code_period"() returns interval
   language sql
   immutable
   set "search_path" to ''
   as $$ select interval '15 minutes' $$;
 
--- True if the session verified a code within the period. Supabase signs
--- these claims: aal2 after a second factor, and amr the time of each
--- method, which a token refresh keeps.
+-- True if the session verified a TOTP code within the period.
 create or replace function "public"."has_fresh_code"() returns boolean
   language sql
   stable
@@ -86,17 +57,14 @@ $$;
 grant execute on function "public"."has_fresh_code"() to anon, authenticated, service_role;
 grant execute on function "public"."admin_code_period"() to anon, authenticated, service_role;
 
--- Refuses anyone but admins, and admins without a fresh code unless
--- fresh_code is false (reading the queue).
+-- Refuses non-admins, and admins without a fresh code if fresh_code.
 create or replace function "public"."require_admin"("fresh_code" boolean default true) returns void
   language plpgsql
   stable
   set "search_path" to ''
   as $$
 begin
-	-- No role claim: a direct database session (dashboard SQL editor, psql,
-	-- pg_cron), open only to those with database access. Requests through
-	-- the API always carry one, anon included.
+	-- No role claim: a direct session (SQL editor, pg_cron).
 	if auth.role() is null or auth.role() = 'service_role' then
 		return;
 	end if;
@@ -112,16 +80,14 @@ $$;
 
 -- Quarantine
 
-alter table "public"."accounts"
+alter table "public"."channels"
   add column "quarantined_at" timestamptz,
   add column "quarantined_by" uuid references auth.users (id) on delete set null;
 
-create index "idx_accounts_quarantined_at" on "public"."accounts" ("quarantined_at")
+create index "idx_channels_quarantined_at" on "public"."channels" ("quarantined_at")
   where "quarantined_at" is not null;
 
--- Users update their own account (theme…). Only the moderation functions
--- below (security definer, so not run as anon or authenticated) may set the
--- quarantine: a user who could would get their own account deleted.
+-- Users can't set or clear the quarantine on their own channels.
 create or replace function "public"."protect_quarantine"() returns trigger
   language plpgsql
   set "search_path" to ''
@@ -130,88 +96,31 @@ begin
 	if current_user in ('anon', 'authenticated')
 		and (NEW.quarantined_at is distinct from (case when TG_OP = 'UPDATE' then OLD.quarantined_at end)
 			or NEW.quarantined_by is distinct from (case when TG_OP = 'UPDATE' then OLD.quarantined_by end)) then
-		raise exception 'only admins quarantine accounts';
+		raise exception 'only admins quarantine channels';
 	end if;
 	return NEW;
 end;
 $$;
 
-create trigger "accounts_protect_quarantine"
-  before insert or update on "public"."accounts"
+create trigger "channels_protect_quarantine"
+  before insert or update on "public"."channels"
   for each row execute function "public"."protect_quarantine"();
 
--- The policies need these as every role, but the API must not serve them, or
--- anyone could list the quarantined accounts: they live in a schema that
--- PostgREST does not expose (config.toml: api.schemas).
-create schema if not exists "private";
-grant usage on schema "private" to anon, authenticated, service_role;
-
-create or replace function "private"."quarantined_channel_ids"() returns setof uuid
-  language sql
-  stable
-  security definer
-  set "search_path" to ''
-  as $$
-	select uc.channel_id
-	from public.accounts a
-	join public.user_channel uc on uc.user_id = a.id
-	where a.quarantined_at is not null;
-$$;
-
-create or replace function "private"."quarantined_track_ids"() returns setof uuid
-  language sql
-  stable
-  security definer
-  set "search_path" to ''
-  as $$
-	select ct.track_id
-	from public.accounts a
-	join public.user_channel uc on uc.user_id = a.id
-	join public.channel_track ct on ct.channel_id = uc.channel_id
-	where a.quarantined_at is not null;
-$$;
-
-revoke all on function "private"."quarantined_channel_ids"() from public;
-revoke all on function "private"."quarantined_track_ids"() from public;
-grant execute on function "private"."quarantined_channel_ids"() to anon, authenticated, service_role;
-grant execute on function "private"."quarantined_track_ids"() to anon, authenticated, service_role;
-
--- What quarantined accounts own is hidden, except to admins. The views
--- (channel_tracks, channels_with_tracks, random_channels_with_tracks) are
--- security invoker, so these apply to them too. The not in (select ...) runs
--- once per query, as a hashed set: a function call per row would make a full
--- scan of tracks hundreds of times slower.
-
-create policy "Hide quarantined accounts" on "public"."channels"
+-- A check on the row itself, so normal reads don't slow down with spam.
+-- Tracks need no policy: the views join channels.
+create policy "Hide quarantined channels" on "public"."channels"
 as restrictive for select to anon, authenticated
-using ((select public.is_admin())
-	or id not in (select private.quarantined_channel_ids()));
-
-create policy "Hide quarantined accounts" on "public"."channel_track"
-as restrictive for select to anon, authenticated
-using ((select public.is_admin())
-	or channel_id not in (select private.quarantined_channel_ids()));
-
-create policy "Hide quarantined accounts" on "public"."tracks"
-as restrictive for select to anon, authenticated
-using ((select public.is_admin())
-	or id not in (select private.quarantined_track_ids()));
-
-create policy "Hide quarantined accounts" on "public"."followers"
-as restrictive for select to anon, authenticated
-using ((select public.is_admin())
-	or (channel_id not in (select private.quarantined_channel_ids())
-		and follower_id not in (select private.quarantined_channel_ids())));
+using ("quarantined_at" is null or (select public.is_admin()));
 
 -- Moderation log
 
 create table "public"."moderation_log" (
   "id" uuid primary key default gen_random_uuid(),
   "created_at" timestamptz not null default now(),
-  -- null for the service role and the daily job, or once the admin is deleted.
+  -- null for the SQL editor and the daily job.
   "admin_id" uuid references auth.users (id) on delete set null,
   "action" text not null check ("action" in ('quarantine', 'release', 'purge')),
-  -- No foreign keys: the log outlives the user and the channels.
+  -- No foreign key: the log outlives the user.
   "user_id" uuid not null,
   "channel_slugs" text[] not null default '{}'
 );
@@ -266,7 +175,6 @@ create or replace function "public"."log_moderation"("log_action" text, "target_
   security definer
   set "search_path" to ''
   as $$
-	-- A purge is the daily job's, not the act of whoever runs it.
 	insert into public.moderation_log (admin_id, action, user_id, channel_slugs)
 	values (case when log_action = 'purge' then null else auth.uid() end,
 		log_action, target_user_id, public.user_channel_slugs(target_user_id));
@@ -275,8 +183,7 @@ $$;
 drop function "public"."ban_user_by_channel_slug"(text, timestamptz);
 drop function "public"."ban_user"(uuid, timestamptz);
 
--- Bans TARGET_USER_ID for good and deletes their channels and tracks,
--- without checking who asks: only called by purge_quarantined.
+-- No auth check: only purge_quarantined calls it.
 create or replace function "public"."purge_account"("target_user_id" uuid) returns void
   language plpgsql
   security definer
@@ -285,14 +192,9 @@ create or replace function "public"."purge_account"("target_user_id" uuid) retur
 begin
 	perform public.log_moderation('purge', target_user_id);
 
-	-- Keeps the account, so its email can't sign up again.
+	-- Keep the user row so the email can't sign up again.
 	update auth.users
 	set banned_until = now() + interval '4000 years'
-	where id = target_user_id;
-
-	-- The purge would otherwise come back every day.
-	update public.accounts
-	set quarantined_at = null, quarantined_by = null
 	where id = target_user_id;
 
 	delete from public.tracks
@@ -303,8 +205,7 @@ begin
 		where uc.user_id = target_user_id
 	);
 
-	-- broadcast.channel_id has no on delete: remove it first, or a live
-	-- account could not be deleted.
+	-- broadcast.channel_id has no on delete cascade.
 	delete from public.broadcast
 	where channel_id in (select channel_id from public.user_channel where user_id = target_user_id);
 
@@ -329,15 +230,17 @@ begin
 		raise exception 'cannot moderate an admin';
 	end if;
 
-	-- Accounts made before the accounts table may have no row.
-	insert into public.accounts (id, quarantined_at, quarantined_by)
-	values (target_user_id, now(), auth.uid())
-	on conflict (id) do update
-	set quarantined_at = excluded.quarantined_at, quarantined_by = excluded.quarantined_by
-	where accounts.quarantined_at is null;
-	if not found then
+	if exists (
+		select 1 from public.channels c
+		join public.user_channel uc on uc.channel_id = c.id
+		where uc.user_id = target_user_id and c.quarantined_at is not null
+	) then
 		raise exception 'the account of % is already quarantined', channel_slug;
 	end if;
+
+	update public.channels
+	set quarantined_at = now(), quarantined_by = auth.uid()
+	where id in (select channel_id from public.user_channel where user_id = target_user_id);
 
 	update auth.users
 	set banned_until = greatest(coalesce(banned_until, now()), now() + public.quarantine_period())
@@ -361,9 +264,10 @@ begin
 	perform public.require_admin();
 	target_user_id := public.channel_slug_owner(channel_slug);
 
-	update public.accounts
+	update public.channels
 	set quarantined_at = null, quarantined_by = null
-	where id = target_user_id and quarantined_at is not null;
+	where id in (select channel_id from public.user_channel where user_id = target_user_id)
+		and quarantined_at is not null;
 	if not found then
 		raise exception 'the account of % is not quarantined', channel_slug;
 	end if;
@@ -374,8 +278,6 @@ begin
 end;
 $$;
 
--- The queue of the admins: quarantined accounts, their channels, and when
--- they will be purged.
 create or replace function "public"."quarantined_accounts"()
   returns table ("user_id" uuid, "channel_slugs" text[], "quarantined_at" timestamptz,
                  "quarantined_by" uuid, "purge_at" timestamptz)
@@ -387,17 +289,17 @@ create or replace function "public"."quarantined_accounts"()
 begin
 	perform public.require_admin(fresh_code => false);
 	return query
-		select a.id, public.user_channel_slugs(a.id), a.quarantined_at, a.quarantined_by,
-			a.quarantined_at + public.quarantine_period()
-		from public.accounts a
-		where a.quarantined_at is not null
-		order by a.quarantined_at;
+		select uc.user_id, array_agg(c.slug order by c.slug), min(c.quarantined_at),
+			min(c.quarantined_by::text)::uuid, min(c.quarantined_at) + public.quarantine_period()
+		from public.channels c
+		join public.user_channel uc on uc.channel_id = c.id
+		where c.quarantined_at is not null
+		group by uc.user_id
+		order by 3;
 end;
 $$;
 
--- Run daily: ban for good the accounts quarantined for longer than the period.
--- An account that fails is skipped with a warning (in the cron logs), so it
--- can't hold back the others; it is tried again the next day.
+-- Daily. A failing account is logged and retried tomorrow.
 create or replace function "public"."purge_quarantined"() returns integer
   language plpgsql
   security definer
@@ -408,8 +310,10 @@ declare
 	purged integer := 0;
 begin
 	for target_user_id in
-		select id from public.accounts
-		where quarantined_at < now() - public.quarantine_period()
+		select distinct uc.user_id
+		from public.channels c
+		join public.user_channel uc on uc.channel_id = c.id
+		where c.quarantined_at < now() - public.quarantine_period()
 	loop
 		begin
 			perform public.purge_account(target_user_id);
@@ -422,8 +326,6 @@ begin
 end;
 $$;
 
--- Clients may call the moderation functions, which refuse anyone but admins;
--- the helpers are internal.
 revoke all on function "public"."user_is_admin"(uuid) from public, anon, authenticated;
 revoke all on function "public"."require_admin"(boolean) from public, anon;
 revoke all on function "public"."channel_slug_owner"(text) from public, anon, authenticated;
